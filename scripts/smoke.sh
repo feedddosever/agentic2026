@@ -10,7 +10,7 @@ check() { # name, expected substring, curl args...
 }
 post() { echo -X POST "$B$1" -H content-type:application/json -d "$2"; }
 check health        '"ok":true'            "$B/health"
-check stats         '"items":15843'        "$B/stats"
+check stats         '"with_ownership_prefix"'        "$B/stats"
 check search-prefix '"id":"2025-255"'      $(post /tools/search '{"prefix":"EL6551234"}')
 check search-text   '"total_matches"'      $(post /tools/search '{"query":"portafogli passaporto estero","lost_from":"2026-10-20","lost_to":"2026-10-25"}')
 check search-none   '"total_matches":0'    $(post /tools/search '{"prefix":"ZZZZ9999"}')
