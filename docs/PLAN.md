@@ -149,14 +149,14 @@ Choices and why:
 
 ### P3 ElevenLabs voice agent (22:00–23:30)  · needs ElevenLabs key
 - [ ] `agents/elevenlabs/agent.json`: prompt, languages (it, en, es, fr, de, zh, ja…), server tools mapped to P2 routes, knowledge base (service page, Delibera 421/2023 fees, c.c. 927–931, hours).
-- [ ] `agents/elevenlabs/setup.ts` creates/updates the agent through the API (reproducible).
+- [x] `agents/elevenlabs/setup.ts` creates/updates the agent through the API (reproducible).
 - [ ] Post-call data collection → `/webhooks/elevenlabs` → `calls`.
 - [ ] Browser widget embed snippet for the Lovable app; Twilio number if the builder provides one.
 - **Accept:** a test conversation in English finds a passport by prefix, states fees, sends the pickup pack link; a conversation in Italian files an alert.
 
 ### P4 Exa: embassies and other offices (23:30–01:00)  · needs Exa key
 - [ ] `agents/exa/build_embassies.ts`: Exa Agent API run per country with structured output → `embassies` (start with the 30 countries most present among tourists; expand if time).
-- [ ] `/tools/other-offices`: Exa search + contents restricted to official domains, Claude summarises to a short list with hours and contacts.
+- [x] `/tools/other-offices`: Exa search + contents restricted to official domains, Claude summarises to a short list with hours and contacts.
 - [ ] Exa Monitor (or scheduled re-run) to keep embassy contacts fresh.
 - **Accept:** `embassies` has ≥ 30 rows with a source URL each; "lost my bag on metro line A" returns ATAC's office with current contacts.
 
@@ -176,8 +176,8 @@ Choices and why:
 
 ### P7 Sentinel automation (05:00–06:30)
 - [x] `/alerts/match`: match new items against open alerts (category + prefix + date window + text), Claude double-checks borderline matches.
-- [ ] Callback: ElevenLabs outbound call to the alert's registered demo number (fallback: in-app voice message generated with ElevenLabs TTS).
-- [ ] GitHub Action `import-official-list.yml`: daily; detects a new PDF on the service page, decodes, upserts, anchors, triggers matching.
+- [x] Callback: ElevenLabs outbound call to the alert's registered demo number (fallback: in-app voice message generated with ElevenLabs TTS).
+- [x] GitHub Action `import-official-list.yml`: daily; detects a new PDF on the service page, decodes, upserts, anchors, triggers matching.
 - **Accept:** registering an alert, then doing an intake that matches it, produces a callback within a minute.
 
 ### P8 Lovable front end (from 21:00, builder drives, in parallel)
@@ -260,3 +260,9 @@ Choices and why:
   key exists; deterministic policy guard always) → signed outbox (EIP-191 by the agent key; /verify detects
   tampering) → alert matching → returns. Privacy fix: full document numbers are masked before anything is
   stored, logged or sent to the LLM. 7 rule tests + 20 smoke checks pass.
+- 21:55 P3/P4/P7 code done ahead of keys. Changes vs plan: the ElevenLabs setup runs as an operator route of the
+  edge function (`/admin/setup-voice-agent`, key stays in Supabase) instead of a local `setup.ts`; call analytics
+  are pulled with `/admin/sync-calls` instead of a post-call webhook (no workspace webhook secret needed);
+  `/tools/other-offices` uses Exa's structured output directly (no extra Claude call). Sentinel importer verified
+  against the live city page (idempotent) and on a simulated new list (40 items re-imported, prefix alert
+  notified). `scripts/reset-demo.sh` clears demo data.

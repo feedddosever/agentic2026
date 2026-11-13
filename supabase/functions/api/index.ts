@@ -6,11 +6,12 @@
 import { createClient } from "npm:@supabase/supabase-js@2.49.4";
 import { OFFICE, computeFees, claimHorizon, documentsToBring } from "./lib/office.ts";
 import { fillDelega } from "./lib/delega.ts";
-import { intake, route, markReturned, flushCustody, alertMatches, outboxPayload, maskContact, type Ctx } from "./lib/engine.ts";
-import { chainInfo, explorerTx, recoverSigner, hashJson, agentBalance, agentAddress, AGENT_ID, IDENTITY_REGISTRY } from "./lib/chain.ts";
+import { intake, route, markReturned, flushCustody, alertMatches, scanAlerts, outboxPayload, maskContact, type Ctx } from "./lib/engine.ts";
+import { chainInfo, explorerTx, recoverSigner, hashJson, agentBalance, agentAddress, anchorDataset, AGENT_ID, IDENTITY_REGISTRY } from "./lib/chain.ts";
 import { exaEnabled, otherOffices, findMission } from "./lib/exa.ts";
 import { llmEnabled, MODEL } from "./lib/llm.ts";
 import { countryByCode } from "./lib/countries.ts";
+import { setupVoiceAgent, recentCalls, voiceEnabled, AGENT_ID as VOICE_AGENT_ID } from "./lib/voice.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -294,7 +295,7 @@ async function adminStatus() {
     integrations: {
       claude: { enabled: llmEnabled(), model: MODEL },
       exa: { enabled: exaEnabled() },
-      elevenlabs: { enabled: !!Deno.env.get("ELEVENLABS_API_KEY"), agent_id: Deno.env.get("ELEVENLABS_AGENT_ID") ?? null },
+      elevenlabs: { enabled: voiceEnabled(), agent_id: VOICE_AGENT_ID(), phone_line: !!Deno.env.get("ELEVENLABS_PHONE_NUMBER_ID") },
       chain: { ...chainInfo(), agent_balance_wei: await agentBalance() },
     },
     counts: { items: items.count, outbox: outboxN.count, alerts: alertsN.count, custody_pending: custodyN.count },
@@ -333,6 +334,27 @@ Deno.serve(async (req) => {
         case "/engine/route": return json(await route(ctx, String(body.item_id ?? "")));
         case "/alerts/match": return json(await alertMatches(ctx, String(body.item_id ?? "")));
         case "/chain/flush": return json(await flushCustody(ctx));
+        case "/alerts/scan": return json(await scanAlerts(ctx, Array.isArray(body.item_ids) ? body.item_ids.map(String) : []));
+        case "/chain/anchor-datasets": {
+          const { data } = await db.from("datasets").select("id, source_url, pdf_sha256, records, merkle_root").is("tx_hash", null);
+          const out = [];
+          for (const d of data ?? []) {
+            const r = await anchorDataset(`0x${d.pdf_sha256.replace(/^0x/, "")}`, d.merkle_root, d.records, d.source_url);
+            if (r.tx_hash) await db.from("datasets").update({ tx_hash: r.tx_hash }).eq("id", d.id);
+            out.push({ source_url: d.source_url, ...r, explorer_url: explorerTx(r.tx_hash) });
+            if (r.error) break;
+          }
+          return json(out);
+        }
+        case "/admin/setup-voice-agent": {
+          if (!voiceEnabled()) return bad("ELEVENLABS_API_KEY not configured", 503);
+          return json(await setupVoiceAgent(API_BASE, VOICE_AGENT_ID()));
+        }
+        case "/admin/sync-calls": {
+          const rows = await recentCalls();
+          if (rows.length) await db.from("calls").upsert(rows);
+          return json({ synced: rows.length });
+        }
         case "/admin/embassy": {
           const c = countryByCode(String(body.country_code ?? ""));
           if (!c) return bad("unknown country_code");
@@ -355,6 +377,7 @@ Deno.serve(async (req) => {
         return json((data ?? []).map((d) => ({ ...d, explorer_url: explorerTx(d.tx_hash) })));
       }
       if (path === "/agent-registration.json") return agentRegistration();
+      if (path === "/config") return json({ voice_agent_id: VOICE_AGENT_ID(), app_url: APP_URL || null, chain: chainInfo() });
       if ((m = path.match(/^\/verify\/([\w-]+)$/))) return await verifyMessage(m[1]);
       if ((m = path.match(/^\/items\/([\w-]+)\/custody$/))) return await custodyTimeline(m[1]);
       if ((m = path.match(/^\/items\/([\w-]+)$/))) {

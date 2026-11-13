@@ -5,6 +5,7 @@ import { parseNote, maskNumber, requiredChannels, templateAppIo, templateEmbassy
 import { countryByCode } from "./countries.ts";
 import { exaEnabled, findMission } from "./exa.ts";
 import { signPayload, writeCustody, hashJson, explorerTx, type CustodyEvent } from "./chain.ts";
+import { voiceEnabled, outboundCall, voiceNote } from "./voice.ts";
 
 export type Ctx = { db: SupabaseClient; pickupUrl: (id: string, lang: string) => string; verifyUrl: (outboxId: string) => string };
 
@@ -139,6 +140,36 @@ export async function intake(ctx: Ctx, input: { photo_base64?: string; media_typ
   };
 }
 
+// ---------- callback to the alert's author (voice) ----------
+async function callback(ctx: Ctx, alertId: string, itemId: string, objects: string[]) {
+  if (!voiceEnabled()) return null;
+  const { data: a } = await ctx.db.from("alerts").select("language, contact_phone").eq("id", alertId).maybeSingle();
+  if (!a) return null;
+  const it = (a.language ?? "en").startsWith("it");
+  const summary = objects.slice(0, 3).join(", ").replace(/\s*-\s*Nr:.*$/i, "").toLowerCase();
+  try {
+    if (a.contact_phone) {
+      const call = await outboundCall(a.contact_phone, a.language ?? "en", summary);
+      if (call.placed) {
+        return await createOutbox(ctx, { channel: "call", recipient_label: `Alert author (${maskContact(a.contact_phone)})`, language: a.language ?? "en",
+          subject: it ? "Chiamata del voice agent" : "Voice agent callback", body: `Outbound call placed by Ritrovo's voice agent (conversation ${call.conversation_id ?? "n/a"}). Verify: {VERIFY_URL}` }, itemId, alertId);
+      }
+    }
+    const text = it
+      ? `Ciao, sono Ritrovo, l'assistente degli oggetti smarriti di Roma. Un oggetto compatibile con la tua segnalazione è arrivato: ${summary}. Trovi i dettagli per il ritiro nel messaggio che ti abbiamo inviato.`
+      : `Hi, this is Ritrovo, Rome's lost and found assistant. An item matching your alert has arrived: ${summary}. You'll find the pickup details in the message we sent you.`;
+    const mp3 = await voiceNote(text);
+    const path = `${itemId}-${alertId.slice(0, 8)}.mp3`;
+    await ctx.db.storage.from("voice").upload(path, mp3, { contentType: "audio/mpeg", upsert: true });
+    const url = ctx.db.storage.from("voice").getPublicUrl(path).data.publicUrl;
+    return await createOutbox(ctx, { channel: "call", recipient_label: "Alert author (voice note)", language: a.language ?? "en",
+      subject: it ? "Messaggio vocale" : "Voice message", body: `${text}\nAudio: ${url}\nVerify: {VERIFY_URL}` }, itemId, alertId);
+  } catch (e) {
+    console.error("callback failed", e);
+    return null;
+  }
+}
+
 // ---------- routing ----------
 const ROUTING_SYSTEM = `You are the return engine of Ritrovo, working for Rome's lost-and-found office (Reparto Oggetti Rinvenuti, Polizia Locale di Roma Capitale).
 Goal: get each found item back to its owner as fast as possible, using only legitimate channels.
@@ -242,6 +273,11 @@ export async function route(ctx: Ctx, itemId: string) {
       drafted.push({ channel: m.contact === "phone" ? "sms" : "email", alert_id: m.alert_id, outbox_id: r.outbox_id });
     }
   }
+  // Voice callback for every alert notified in this run (call if a phone line exists, else a voice note).
+  for (const d of drafted.filter((x) => x.alert_id && x.channel !== "call")) {
+    const cb = await callback(ctx, d.alert_id!, itemId, it.objects);
+    if (cb) drafted.push({ channel: "call", alert_id: d.alert_id, outbox_id: cb.outbox_id });
+  }
   if (!decision) {
     decision = required[0]?.channel ?? (drafted.some((d) => d.alert_id) ? "alert_match" : "hold");
     reason = required[0]?.reason ?? (drafted.some((d) => d.alert_id) ? "A citizen's alert matches this item; they have been notified." : hold_reason);
@@ -255,6 +291,24 @@ export async function route(ctx: Ctx, itemId: string) {
     custodyRes = await custody(ctx, "routed", itemId, ev, decision);
   }
   return { decision, reason, mode, outbox_ids: drafted.map((d) => d.outbox_id), drafted, policy_guard_added: guard, error: llmError, custody: custodyRes };
+}
+
+// ---------- new official items vs alerts (Sentinel) ----------
+export async function scanAlerts(ctx: Ctx, itemIds: string[]) {
+  const notified = [];
+  for (const id of itemIds.slice(0, 2000)) {
+    const matches = (await alertMatches(ctx, id)).filter((m) => m.score >= 10 && m.contact !== "none");
+    if (!matches.length) continue;
+    const { data: it } = await ctx.db.from("items").select("id, objects, id_doc, nationality, date_acquired").eq("id", id).single();
+    for (const m of matches) {
+      const r = await createOutbox(ctx, templateAlertMatch(it as ItemForRouting, m.language, ctx.pickupUrl(id, m.language), m.contact === "phone" ? "sms" : "email"), id, m.alert_id);
+      await ctx.db.from("alerts").update({ status: "matched", matched_item_id: id }).eq("id", m.alert_id);
+      const cb = await callback(ctx, m.alert_id, id, (it as ItemForRouting).objects);
+      notified.push({ item_id: id, alert_id: m.alert_id, outbox_id: r.outbox_id, callback: cb?.outbox_id ?? null });
+    }
+  }
+  await ctx.db.from("agent_runs").insert({ kind: "match", mode: "rules", steps: [], result: { scanned: itemIds.length, notified } });
+  return { scanned: itemIds.length, notified };
 }
 
 // ---------- returns ----------

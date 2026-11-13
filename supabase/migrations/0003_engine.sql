@@ -57,3 +57,6 @@ language sql stable security definer set search_path = public, extensions as $$
   order by score desc
 $$;
 revoke all on function public.match_alerts_for_item(text, real) from public, anon, authenticated;
+
+-- Public bucket for voice notes sent to alert authors (contain only the item summary, random paths).
+insert into storage.buckets (id, name, public) values ('voice', 'voice', true) on conflict (id) do nothing;

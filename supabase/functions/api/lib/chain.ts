@@ -36,6 +36,7 @@ const ABI = parseAbi([
   "function logRouted(bytes32 itemHash, bytes32 channel, bytes32 evidence)",
   "function logReturned(bytes32 itemHash, bytes32 evidence)",
   "function stageOf(bytes32 itemHash) view returns (uint8)",
+  "function anchorDataset(bytes32 pdfSha256, bytes32 merkleRoot, uint32 recordCount, string sourceUrl)",
 ]);
 
 export const explorerTx = (hash: string | null) => (hash ? `${EXPLORER}/tx/${hash}` : null);
@@ -99,5 +100,17 @@ export async function agentBalance() {
     return (await publicClient.getBalance({ address: agentAddress })).toString();
   } catch {
     return null;
+  }
+}
+
+/** Anchor an official list's fingerprint (sha256 of the PDF + Merkle root of decoded records). */
+export async function anchorDataset(pdfSha256: Hex, merkleRoot: Hex, records: number, sourceUrl: string) {
+  if (!walletClient || !CONTRACT) return { tx_hash: null as string | null, error: "chain not configured" };
+  try {
+    const hash = await walletClient.writeContract({ address: CONTRACT, abi: ABI, functionName: "anchorDataset", args: [pdfSha256, merkleRoot, records, sourceUrl] });
+    await publicClient.waitForTransactionReceipt({ hash, timeout: 20_000 }).catch(() => null);
+    return { tx_hash: hash as string, error: null };
+  } catch (e) {
+    return { tx_hash: null, error: String((e as Error).message ?? e).slice(0, 300) };
   }
 }

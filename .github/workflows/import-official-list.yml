@@ -1,0 +1,25 @@
+# Sentinel: every weekday morning, check Rome's lost-and-found page for a new list, import it,
+# anchor its fingerprint on Avalanche and notify citizens whose alerts match a new item.
+name: Import official found-items list
+on:
+  schedule:
+    - cron: "17 6 * * 1-5"   # 07:17 / 08:17 Rome time
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r requirements.txt
+      - name: Import
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          API_BASE: https://izrggntqsssfzazjfhht.supabase.co/functions/v1/api
+          OPERATOR_TOKEN: ${{ secrets.RITROVO_OPERATOR_TOKEN }}
+        run: python3 pipeline/import_new_list.py izrggntqsssfzazjfhht
