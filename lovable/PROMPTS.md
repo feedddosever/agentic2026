@@ -10,9 +10,9 @@ Keep credits for fixes: if a prompt's result is mostly right, fix with a short f
 - Connect GitHub (Lovable → GitHub → Connect) so the code lands in a public repo for the submission.
 - Facts used below:
   - `API_BASE = https://izrggntqsssfzazjfhht.supabase.co/functions/v1/api`
-  - Operator token: in the repo's local `.env` (`OPERATOR_TOKEN`), ask Claude for it in the session if needed.
-    It is typed into the operator login screen and kept in `sessionStorage`; never hard-code it.
-  - ElevenLabs agent id: given after P3 (prompt 4 has a placeholder).
+  - Operator token: in the repo's local `.env` (`OPERATOR_TOKEN`). It is typed into the operator login screen and
+    kept in `sessionStorage`; never hard-code it.
+  - The ElevenLabs agent id is read at runtime from `GET /config`; nothing to paste.
 
 ---
 
@@ -98,13 +98,13 @@ Loading skeletons, error toast on failure.
 Fill "/item/:id" and "/pickup/:id" in Ritrovo.
 
 /item/:id: GET {API_BASE}/items/{id} returns {id, found_date, summary, objects[], categories[],
-contains_identity_document, status}. Show the record ("Record {number} of {year}" from the id "YEAR-NUMBER"),
-found date, the list of objects (masked numbers like "Nr: CA718* * * *" are shown as they are), and an
-"Is it yours?" box: input "First characters of your document number or IMEI" → POST {API_BASE}/tools/verify
-with {"item_id": id, "prefix": value} → {match: boolean, note}. On match show a green confirmation and a big
-button "Get my pickup pack" → /pickup/:id. On no match, say it does not match this record and suggest searching
-again. If the item has no numbers at all, skip the check and show the pickup button directly with the note
-"Bring anything that proves it's yours".
+contains_identity_document, status}. Show the record ("Record {number} of {year}" from the id "YEAR-NUMBER";
+for ids starting with "IN-" show the id as is), found date, the list of objects (masked numbers like
+"Nr: CA718* * * *" are shown as they are), and an "Is it yours?" box: input "First characters of your document
+number or IMEI" → POST {API_BASE}/tools/verify with {"item_id": id, "prefix": value} → {match: boolean, note}.
+On match show a green confirmation and a big button "Get my pickup pack" → /pickup/:id. On no match, say it does
+not match this record and suggest searching again. If the item has no numbers at all, skip the check and show the
+pickup button directly with the note "Bring anything that proves it's yours".
 
 /pickup/:id: GET {API_BASE}/pickup/{id}?lang={en|it} returns
   { item: {...as above}, fees_today: {currency, lines:[{label, amount}], total, notes:[], days_in_custody},
@@ -132,7 +132,9 @@ language (en/it/es/fr/de/zh/ja...), and how to reach you: phone and/or email (at
 Consent checkbox: "Ritrovo may contact me about this item. My contact details are never published."
 Submit → POST {API_BASE}/tools/alert with
   {what, category, lost_on, lost_where, prefix, language, phone, email}
-→ {alert_id, message}. Show the message and the alert id in a success card.
+→ {alert_id, message, possible_matches_now: [items like the search results]}. Show the message and the alert id
+in a success card; if possible_matches_now is not empty, show them below as "It may already be here" with links
+to /item/:id.
 
 Voice assistant: on every page show the ElevenLabs Conversational AI widget (bottom-right). Load
 https://unpkg.com/@elevenlabs/convai-widget-embed@0.22.0 (script type="text/javascript", async) once in
@@ -178,13 +180,13 @@ Tab 1 "Intake": register a newly handed-in object.
 ## Prompt 6: operator console – queue, outbox, returns
 
 ```
-Add tabs 2–4 to "/operator" in Ritrovo (same auth header as tab 1).
+Add tabs 2–5 to "/operator" in Ritrovo (same auth header as tab 1).
 
 Tab 2 "Queue": GET {API_BASE}/queue returns
   [{ id, created_at, date_acquired, objects[], id_doc, nationality, status: "in_custody"|"routed"|"returned",
      decision, reason, photo_path }]
 Table with filters by status; row click opens a side sheet with the custody timeline from
-GET {API_BASE}/items/{id}/custody → [{event, created_at, tx_hash, explorer_url}], and a button
+GET {API_BASE}/items/{id}/custody → [{event, created_at, tx_hash, explorer_url, status}], and a button
 "Mark as returned" → POST {API_BASE}/items/{id}/return with {verified_with: "prefix"|"id_document"|"description"}
 → {status, custody:{tx_hash, explorer_url}}.
 
@@ -193,7 +195,8 @@ Tab 3 "Outbox": GET {API_BASE}/outbox returns
      subject, body, status: "draft"|"demo_sent", verify_url }]
 Group by channel. Embassy messages grouped by recipient_label as "today's batch for {recipient}". Show each
 message as a card with subject/body, the recipient, a "Verify" link (verify_url) and a big notice at the top:
-"Demo mode: nothing is sent to real embassies or citizens."
+"Demo mode: nothing is sent to real embassies or citizens." If a body contains an "Audio: <url>" line, render an
+audio player for that URL.
 
 Tab 4 "Alerts": GET {API_BASE}/alerts returns
   [{ id, created_at, what, lost_on, lost_where, language, status, matched_item_id, contact: "+39 3** *** **12" }]
@@ -222,15 +225,15 @@ Fill "/verify/:messageId" and "/about" in Ritrovo.
             custody_contract, custody_contract_url, explorer_url},
     signature: string|null, recovered_signer: string|null, payload_hash: string|null }
 Explain in plain words: "This message was sent by Ritrovo's registered agent" (green shield) or "We could not
-verify this message – do not pay anything or share documents" (red). Show the agent identity with a link to
-the explorer and the agent id. Add an input to paste a message id manually.
+verify this message – do not pay anything or share documents" (red). Show the agent identity (ERC-8004 agent
+id, chain) with a link to the explorer. Add an input to paste a message id manually.
 
 /about: what Ritrovo is, the numbers from /stats, how the official PDF lists are decoded (the PDFs use fonts
 with no text map, so search and copy-paste don't work; Ritrovo identifies each of the 102 glyph shapes and
 rebuilds all 15,843 records), the data sources with links (comune.roma.it service page), privacy (no personal
 data published; numbers stay masked like the official list; onchain records are hashes only), and the
 open-data fingerprints from GET {API_BASE}/datasets → [{source_url, pdf_sha256, records, merkle_root,
-tx_hash, explorer_url}].
+tx_hash, explorer_url}] with "anchored on Avalanche" links.
 ```
 
 ## Prompt 8: polish
