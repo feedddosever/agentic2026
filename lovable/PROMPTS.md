@@ -134,11 +134,11 @@ Submit → POST {API_BASE}/tools/alert with
   {what, category, lost_on, lost_where, prefix, language, phone, email}
 → {alert_id, message}. Show the message and the alert id in a success card.
 
-Voice assistant: on every page show a floating button "Talk to Ritrovo" (bottom-right). Use the ElevenLabs
-Conversational AI web widget: load https://unpkg.com/@elevenlabs/convai-widget-embed@0.22.0 (script type="text/javascript",
-async) once in index.html and render <elevenlabs-convai agent-id="AGENT_ID_PLACEHOLDER"></elevenlabs-convai>.
-Put the agent id in src/lib/config.ts as VOICE_AGENT_ID so it is easy to change. If the id is still
-"AGENT_ID_PLACEHOLDER", hide the widget.
+Voice assistant: on every page show the ElevenLabs Conversational AI widget (bottom-right). Load
+https://unpkg.com/@elevenlabs/convai-widget-embed@0.22.0 (script type="text/javascript", async) once in
+index.html. At startup GET {API_BASE}/config → {voice_agent_id: string|null, app_url, chain}; when
+voice_agent_id is not null render <elevenlabs-convai agent-id="{voice_agent_id}"></elevenlabs-convai>,
+otherwise render nothing.
 On the home page add a short line under the hero: "Prefer to talk? Ask our assistant in any language."
 ```
 
@@ -159,13 +159,20 @@ Tab 1 "Intake": register a newly handed-in object.
     Example placeholder: "Portafoglio nero con passaporto americano, consegnato da ATAC a Termini".
   - Optional fields: found where, handed in by (select: cittadino, ATAC, Trenitalia, taxi, Polizia, altro).
   - Submit → POST {API_BASE}/intake with {photo_base64, note, found_where, finder_channel}.
-    Response: { item: {id, objects[], colour, brand, nationality, id_doc, categories[]},
-                routing: { decision: "app_io"|"embassy"|"alert_match"|"hold", reason: string,
-                           outbox_ids: string[], alert_matches: [{alert_id, score}] },
-                custody: { event: "intake", tx_hash, explorer_url } }
-    Show a result panel with three steps animating in: "Understood" (the structured fields as chips),
-    "Routed" (decision + reason in plain language), "Logged" (custody tx with explorer link; show "pending" if
-    tx_hash is null). This can take ~10–20 s: show progress text while waiting.
+    Response: { item: {id, objects[], colour, brand, nationality, id_doc, categories[], description_en},
+                understanding: { mode: "llm"|"rules", model: string|null, error: string|null },
+                routing: { decision: "app_io"|"embassy"|"alert_match"|"hold", reason: string, mode: "llm"|"rules",
+                           outbox_ids: string[], drafted: [{channel, outbox_id, country_code?, alert_id?}],
+                           policy_guard_added: string[], custody: {event, tx_hash, explorer_url} | null },
+                custody: { event: "intake", tx_hash: string|null, explorer_url: string|null } }
+    Show a result panel with three steps animating in: "Understood" (the structured fields as chips, with a
+    small badge "AI" when understanding.mode is "llm", else "rules"), "Routed" (decision + reason in plain
+    language, one chip per drafted message; if policy_guard_added is not empty add a note "policy guard added:
+    …"), "Logged" (custody tx with explorer link; "pending onchain" when tx_hash is null). Add a link
+    "Show agent trace" that opens a drawer with GET {API_BASE}/items/{id}/trace (operator header) →
+    [{kind: "intake"|"route"|"match", mode, model, steps: [{tool, input, output, ms}], result, error, created_at}]
+    rendered as a vertical timeline of tool calls (tool name, short JSON of input/output, duration).
+    This can take ~10–30 s: show progress text while waiting.
 ```
 
 ## Prompt 6: operator console – queue, outbox, returns
@@ -174,7 +181,8 @@ Tab 1 "Intake": register a newly handed-in object.
 Add tabs 2–4 to "/operator" in Ritrovo (same auth header as tab 1).
 
 Tab 2 "Queue": GET {API_BASE}/queue returns
-  [{ id, created_at, objects[], id_doc, status: "in_custody"|"routed"|"returned", decision, reason }]
+  [{ id, created_at, date_acquired, objects[], id_doc, nationality, status: "in_custody"|"routed"|"returned",
+     decision, reason, photo_path }]
 Table with filters by status; row click opens a side sheet with the custody timeline from
 GET {API_BASE}/items/{id}/custody → [{event, created_at, tx_hash, explorer_url}], and a button
 "Mark as returned" → POST {API_BASE}/items/{id}/return with {verified_with: "prefix"|"id_document"|"description"}
@@ -190,6 +198,17 @@ message as a card with subject/body, the recipient, a "Verify" link (verify_url)
 Tab 4 "Alerts": GET {API_BASE}/alerts returns
   [{ id, created_at, what, lost_on, lost_where, language, status, matched_item_id, contact: "+39 3** *** **12" }]
 (contacts arrive already masked). Show as a list with status badges.
+
+Tab 5 "System": GET {API_BASE}/admin/status returns
+  { integrations: { claude: {enabled, model}, exa: {enabled}, elevenlabs: {enabled, agent_id, phone_line},
+                    chain: {chain, chain_id, custody_contract, custody_contract_url, agent_address,
+                            erc8004_agent_id, agent_registry, agent_balance_wei} },
+    counts: { items, outbox, alerts, custody_pending } }
+Show one status row per integration with a green/grey dot, the counts as tiles, and links to the contract and
+agent address on the explorer. Below, GET {API_BASE}/embassies → [{country_code, country, mission_name, email,
+phone, address, hours, source_url, refreshed_at}] as a compact table ("Consulate directory, built with Exa").
+Buttons: "Retry pending onchain logs" → POST {API_BASE}/chain/flush; "Refresh call stats" → POST
+{API_BASE}/admin/sync-calls.
 ```
 
 ## Prompt 7: verify page and about page
@@ -198,9 +217,10 @@ Tab 4 "Alerts": GET {API_BASE}/alerts returns
 Fill "/verify/:messageId" and "/about" in Ritrovo.
 
 /verify/:messageId: GET {API_BASE}/verify/{messageId} returns
-  { valid: boolean, message: {channel, recipient_label, subject, created_at, item_id},
-    agent: {name, erc8004_agent_id, address, registry, chain, explorer_url},
-    signature: string, recovered_signer: string }
+  { valid: boolean, reason: string, message: {channel, recipient_label, subject, created_at, item_id} | undefined,
+    agent: {name, chain, chain_id, agent_address, erc8004_agent_id, agent_registry, identity_registry,
+            custody_contract, custody_contract_url, explorer_url},
+    signature: string|null, recovered_signer: string|null, payload_hash: string|null }
 Explain in plain words: "This message was sent by Ritrovo's registered agent" (green shield) or "We could not
 verify this message – do not pay anything or share documents" (red). Show the agent identity with a link to
 the explorer and the agent id. Add an input to paste a message id manually.

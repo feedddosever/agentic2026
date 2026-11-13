@@ -387,6 +387,14 @@ Deno.serve(async (req) => {
       if ((m = path.match(/^\/pickup\/([\w-]+)\/delega\.pdf$/))) return await delegaPdf(m[1], url);
       if ((m = path.match(/^\/pickup\/([\w-]+)$/))) return await pickupPage(m[1], url);
       if (!isOperator) return bad(`no route for GET ${path} (or operator token required)`, 404);
+      if ((m = path.match(/^\/items\/([\w-]+)\/trace$/))) {
+        const { data } = await db.from("agent_runs").select("kind, mode, model, steps, result, error, created_at").eq("item_id", m[1]).order("created_at");
+        return json(data ?? []);
+      }
+      if (path === "/embassies") {
+        const { data } = await db.from("embassies").select("*").order("country");
+        return json(data ?? []);
+      }
       switch (path) {
         case "/queue": return await queue(url);
         case "/outbox": return await outbox();

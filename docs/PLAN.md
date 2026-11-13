@@ -189,12 +189,12 @@ Choices and why:
 ### P9 Hardening and docs (06:30–10:00)
 - [ ] End-to-end rehearsal of the demo script three times; fix anything flaky.
 - [ ] Fallback switches (`DEMO_MODE` env: recorded Exa results, pre-signed chain txs, text chat instead of voice).
-- [ ] README (problem, numbers, architecture, how to run, sponsor usage), `docs/ARCHITECTURE.md`, `docs/DEMO.md`.
+- [x] README (problem, numbers, architecture, how to run, sponsor usage), `docs/ARCHITECTURE.md`, `docs/DEMO.md`.
 - [ ] Check every judging criterion against the product (idea/impact, technical execution, demo).
 - **Accept:** a fresh reader can run the pipeline and deploy from the README; demo runs in < 3:00.
 
 ### P10 Video and submission (10:00–13:30, feature freeze 12:00)
-- [ ] Video script (3:00) and shot list; builder records it.
+- [x] Video script (3:00) and shot list; builder records it.
 - [ ] Repo public; live link; submission form fields filled (`docs/SUBMISSION.md`), Avalanche contract address included.
 - **Accept:** submitted before 13:30 (30-minute buffer).
 
@@ -266,3 +266,6 @@ Choices and why:
   `/tools/other-offices` uses Exa's structured output directly (no extra Claude call). Sentinel importer verified
   against the live city page (idempotent) and on a simulated new list (40 items re-imported, prefix alert
   notified). `scripts/reset-demo.sh` clears demo data.
+- 22:10 Docs: README, ARCHITECTURE, DEMO (script, Q&A, fallbacks, video plan), ACTIVATION (what to run when
+  each key/fund arrives), SUBMISSION (form fields). Lovable prompts updated to the final API (agent trace drawer,
+  system tab, widget id from `/config`). Added operator routes `/items/:id/trace` and `/embassies`.
