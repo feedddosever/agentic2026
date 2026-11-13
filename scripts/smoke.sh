@@ -24,4 +24,13 @@ check delega-pdf    '%PDF'                 "$B/pickup/2026-3/delega.pdf?owner=Ma
 check item          '"id":"2026-3"'        "$B/items/2026-3"
 check alert-bad     '"error"'              $(post /tools/alert '{}')
 check unknown-route '"error"'              "$B/nope"
+check datasets      '"merkle_root"'        "$B/datasets"
+check agent-card    'registration-v1'      "$B/agent-registration.json"
+check verify-404    '"valid":false'        "$B/verify/00000000-0000-0000-0000-000000000000"
+check op-locked     'operator token'       "$B/queue"
+check offices       '"guidance"'           $(post /tools/other-offices '{"what":"zaino","where":"metro A"}')
+if [[ -n "${OPERATOR_TOKEN:-}" ]]; then
+  check op-status   '"integrations"'       "$B/admin/status" -H "x-operator-token: $OPERATOR_TOKEN"
+  check op-queue    '['                    "$B/queue" -H "x-operator-token: $OPERATOR_TOKEN"
+fi
 echo "passed $pass, failed $fail"; [[ $fail -eq 0 ]]

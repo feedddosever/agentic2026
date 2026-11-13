@@ -161,21 +161,21 @@ Choices and why:
 - **Accept:** `embassies` has ≥ 30 rows with a source URL each; "lost my bag on metro line A" returns ATAC's office with current contacts.
 
 ### P5 Return engine and operator intake (01:00–03:30)  · needs Anthropic key
-- [ ] `/intake`: photo + dictation → Claude vision → structured fields (objects, colour, brand, nationality of documents, found where, finder channel); masks document numbers like the official list.
-- [ ] `/engine/route`: agent loop with tools `classify`, `lookup_embassy`, `exa_find_mission` (fallback), `draft_notice`, `log_custody`; writes `outbox` rows in the right language; Italian docs → App IO-style notice; foreign docs → embassy batch; others → `/alerts/match`.
+- [x] `/intake`: photo + dictation → Claude vision → structured fields (objects, colour, brand, nationality of documents, found where, finder channel); masks document numbers like the official list.
+- [x] `/engine/route`: agent loop with tools `classify`, `lookup_embassy`, `exa_find_mission` (fallback), `draft_notice`, `log_custody`; writes `outbox` rows in the right language; Italian docs → App IO-style notice; foreign docs → embassy batch; others → `/alerts/match`.
 - [ ] Daily embassy batch view (grouped outbox per mission).
 - **Accept:** a photo of a wallet with a (sample) foreign passport ends as an embassy outbox draft addressed to the right consulate, plus a custody event.
 
 ### P6 Avalanche (03:30–05:00)  · needs a funded testnet wallet
-- [ ] `contracts/CustodyLog.sol` (events: Intake, Routed, Returned, DatasetAnchored; owner-only writes) + tests.
+- [x] `contracts/CustodyLog.sol` (events: Intake, Routed, Returned, DatasetAnchored; owner-only writes) + tests.
 - [ ] Deploy to Fuji (mainnet only if team1 requires it); verify on the explorer.
 - [ ] Register the Ritrovo agent in the ERC-8004 Identity Registry (agent card JSON hosted with the app).
-- [ ] `/chain/*` helper in the edge function (viem); `/verify/:message_id` page data.
+- [x] `/chain/*` helper in the edge function (viem); `/verify/:message_id` page data.
 - [ ] Anchor both datasets (PDF hash + Merkle root).
 - **Accept:** explorer shows contract, dataset anchors and at least one intake → return lifecycle; the agent id resolves in an ERC-8004 explorer.
 
 ### P7 Sentinel automation (05:00–06:30)
-- [ ] `/alerts/match`: match new items against open alerts (category + prefix + date window + text), Claude double-checks borderline matches.
+- [x] `/alerts/match`: match new items against open alerts (category + prefix + date window + text), Claude double-checks borderline matches.
 - [ ] Callback: ElevenLabs outbound call to the alert's registered demo number (fallback: in-app voice message generated with ElevenLabs TTS).
 - [ ] GitHub Action `import-official-list.yml`: daily; detects a new PDF on the service page, decodes, upserts, anchors, triggers matching.
 - **Accept:** registering an alert, then doing an intake that matches it, produces a callback within a minute.
@@ -253,3 +253,10 @@ Choices and why:
   P3/P4/P5; those start as soon as the keys are in.
 - 20:25 P8 prompts written (8 prompts); operator routes added to the API contract (section 6) so the
   front end and P5–P7 build against the same spec. Agent/deploy wallet generated (address in `.env`, testnet only).
+- 21:25 P6 (code) done: CustodyLog.sol, 9 Hardhat tests, deploy + ERC-8004 register scripts (dry-run OK on a
+  local chain). Live deploy waits for test AVAX. Note: ERC-8004 forbids an agent owner from giving its own agent
+  feedback, so N1 (public return rate via the Reputation Registry) needs a separate office wallet as reviewer.
+- 21:25 P5 + P7 matcher done in rules mode (no keys): intake → custody → routing agent (Claude tool loop when the
+  key exists; deterministic policy guard always) → signed outbox (EIP-191 by the agent key; /verify detects
+  tampering) → alert matching → returns. Privacy fix: full document numbers are masked before anything is
+  stored, logged or sent to the LLM. 7 rule tests + 20 smoke checks pass.
