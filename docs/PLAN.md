@@ -126,7 +126,7 @@ Choices and why:
 ### P0 Setup and feasibility (18:30–19:00)
 - [x] Check toolchain: Supabase MCP access, Deno or Supabase CLI, Foundry or solc/viem, Node.
 - [x] Supabase project: using `agentic2026` (ref `izrggntqsssfzazjfhht`, eu-west-1) on a new account; see change log.
-- [ ] Repo skeleton: `pipeline/`, `supabase/`, `contracts/`, `agents/`, `lovable/`, `docs/`.
+- [x] Repo skeleton: `pipeline/`, `supabase/`, `contracts/`, `agents/`, `lovable/`, `docs/`.
 - [ ] Ask the builder for keys (secure form, when needed, not all at once): Anthropic, ElevenLabs, Exa; later Twilio (optional).
 - **Accept:** project exists, skeleton committed, list of blocked items known.
 
@@ -138,10 +138,10 @@ Choices and why:
 - **Accept:** `select count(*) from items` = 15,843; search for `EL655` returns the record; RLS blocks anonymous reads of `alerts`.
 
 ### P2 Search and citizen tools (20:00–22:00)
-- [ ] SQL function `search_items` (fts + trigram + prefix + date window + category, ranked).
-- [ ] Edge function `api` with `/tools/search|verify|fees|pickup-pack|alert`.
-- [ ] Pickup page + delega PDF generation (pre-filled from the official form layout).
-- [ ] Smoke test script `scripts/smoke.sh` hitting every route.
+- [x] SQL function `search_items` (fts + trigram + prefix + date window + category, ranked).
+- [x] Edge function `api` with `/tools/search|verify|fees|pickup-pack|alert`.
+- [x] Pickup page + delega PDF generation (pre-filled from the official form layout).
+- [x] Smoke test script `scripts/smoke.sh` hitting every route.
 - **Accept:** smoke script green against the deployed function; English query "black wallet with US passport" returns relevant items when the agent passes Italian terms.
 
 ### P3 ElevenLabs voice agent (22:00–23:30)  · needs ElevenLabs key
@@ -239,3 +239,12 @@ Choices and why:
   A dedicated cloud environment `agentic2026` (limited network) holds this project's secrets.
 - 19:40 P1 done: 15,843 items loaded; `id_doc` + `prefixes` added (9,109 records with an ownership
   prefix); both datasets fingerprinted (PDF sha256 + Merkle root).
+- 20:05 P2 done: `api` edge function deployed (verify_jwt off; public tools, operator routes will check
+  `x-operator-token`); 15/15 smoke tests pass; delega PDF pre-fill verified visually. The pickup *page* is
+  served as JSON by the API and rendered by the Lovable app (P8).
+- 20:05 Keys: `api.anthropic.com` bypasses the egress proxy, so injected credentials can't reach it from
+  this container. Decision: every sponsor/LLM key lives only in Supabase Edge Function secrets, and
+  one-off jobs (ElevenLabs agent setup, embassy directory build) run as operator-only routes of the edge
+  function. The builder enters each key once, in the Supabase dashboard.
+- 20:05 Order change while keys are pending: P6 (contract, no key needed) and P8 prompts move ahead of
+  P3/P4/P5; those start as soon as the keys are in.
