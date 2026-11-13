@@ -7,3 +7,7 @@ __pycache__/
 .vercel/
 contracts/out/
 contracts/cache/
+contracts/node_modules/
+contracts/artifacts/
+contracts/cache/
+contracts/deployments/hardhat.json

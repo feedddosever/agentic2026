@@ -1,0 +1,16 @@
+[
+ {
+  "year": 2025,
+  "source_url": "https://www.comune.roma.it/web-resources/cms/documents/Rinvenimenti_01012025_31122025.pdf",
+  "pdf_sha256": "0x5ff9fd71137ca2729e260d1bef75af5745ebb69356abe32f54d700b0a0e9cecd",
+  "records": 8903,
+  "merkle_root": "0xbd9a1b3586710dc2f8d1952138bf9594445adf78f7505a64f1c8935bbbc89aaa"
+ },
+ {
+  "year": 2026,
+  "source_url": "https://www.comune.roma.it/web-resources/cms/documents/Rinvenimenti_01012026_11112026.pdf",
+  "pdf_sha256": "0xe29cb948ada8f7900b0f04ae355bb0969430cf5fe373c3f72bc00f436c1bc572",
+  "records": 6940,
+  "merkle_root": "0xed0a52e42bc04657d9be03833bd8f55c171dbf846412c8940744445dd82d6962"
+ }
+]
