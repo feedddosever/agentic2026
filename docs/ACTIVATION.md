@@ -1,5 +1,7 @@
 # Activation checklist (when keys and funds arrive)
 
+Status: steps 1–4 done (keys in, voice agent created, 32 consulates built). Remaining: 5 (AVAX), 6 (APP_URL), 7 (GitHub secrets).
+
 Everything is deployed already; each step switches one integration from fallback to live.
 Check progress any time with:
 

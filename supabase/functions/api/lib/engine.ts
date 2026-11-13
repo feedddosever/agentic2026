@@ -22,13 +22,20 @@ const CATS: [string, string[]][] = [
   ["gioielli", ["ANELLO", "COLLANA", "BRACCIALE", "ORECCHIN", "GIOIELL"]],
 ];
 const categorize = (o: string) => CATS.find(([, kws]) => kws.some((k) => o.includes(k)))?.[0] ?? "altro";
+/** Bring model output to the catalogue's spelling (so rules, prefixes and categories work). */
+export const normObject = (o: string) =>
+  o.toUpperCase()
+    .replace(/À/g, "A'").replace(/[ÈÉ]/g, "E'").replace(/Ì/g, "I'").replace(/Ò/g, "O'").replace(/Ù/g, "U'")
+    .replace(/\bCARTA\s+(D'|DI\s+)IDENTITA'?/g, "CARTA IDENTITA'")
+    .replace(/\bNR\s*[:.]\s*/g, "Nr: ")
+    .replace(/\s+/g, " ").trim();
 const ITA_DOC = /^(CARTA IDENTITA'|CARTA D'IDENTITA'|PATENTE DI GUIDA|TESSERA SANITARIA|CODICE FISCALE|PERMESSO DI SOGGIORNO|PASSAPORTO)(?!.*ESTER)/;
 const FOR_DOC = /(PASSAPORTO ESTERO|CARTA IDENTITA' ESTERA|PATENTE DI GUIDA ESTERA|TESSERA SANITARIA ESTERA|DOCUMENTO DI IDENTITA' ESTER)/;
 export function idDocKind(objs: string[]) {
   const ita = objs.some((o) => ITA_DOC.test(o)), fore = objs.some((o) => FOR_DOC.test(o));
   return ita && fore ? "mixed" : ita ? "italian" : fore ? "foreign" : "none";
 }
-const PREFIX = /(?:\bNr|\bIMEI)\s*:\s*([A-Z0-9][A-Z0-9 ./\-]*?)\s*\*/g;
+const PREFIX = /(?:\bNr|\bIMEI)\s*:\s*([A-Z0-9][A-Z0-9 ./\-]*?)\s*\*/gi;
 export const prefixesOf = (objs: string[]) =>
   [...new Set(objs.flatMap((o) => [...o.matchAll(PREFIX)].map((m) => m[1].toUpperCase().replace(/[^A-Z0-9]/g, "")).filter((p) => p.length >= 3)))];
 /** Remove full document/card/IMEI numbers from free text (operator notes). */
@@ -98,7 +105,7 @@ export async function intake(ctx: Ctx, input: { photo_base64?: string; media_typ
       const t0 = Date.now();
       const r = await understandIntake({ photo_b64: input.photo_base64, media_type: input.media_type, note, found_where: input.found_where, finder_channel: input.finder_channel });
       if (r) {
-        f = { ...r.fields, objects: r.fields.objects.map((o) => maskFreeText(o.toUpperCase())).filter(Boolean), description_en: maskFreeText(r.fields.description_en) };
+        f = { ...r.fields, objects: r.fields.objects.map((o) => normObject(maskFreeText(o))).filter(Boolean), description_en: maskFreeText(r.fields.description_en) };
         if (!f.objects.length) f.objects = ["ALTRO (Oggettistica)"];
         mode = "llm"; model = r.model;
         steps.push({ tool: "understand_photo_and_note", input: { note, has_photo: !!input.photo_base64 }, output: f, ms: Date.now() - t0 });
@@ -126,7 +133,7 @@ export async function intake(ctx: Ctx, input: { photo_base64?: string; media_typ
     id, source: "intake", date_acquired: today, objects, categories: [...new Set(objects.map(categorize))].sort(),
     id_doc: idDocKind(objects), prefixes: prefixesOf(objects), colour: f.colour || null, brand: f.brand || null,
     found_where: f.found_where || null, finder_channel: f.finder_channel || null, nationality, photo_path,
-    intake_note: note || null, evidence_hash: evidence,
+    intake_note: note || null, evidence_hash: evidence, description_en: maskFreeText(f.description_en || "") || null,
   };
   const { error } = await ctx.db.from("items").insert(row);
   if (error) throw new Error(error.message);
@@ -146,7 +153,9 @@ async function callback(ctx: Ctx, alertId: string, itemId: string, objects: stri
   const { data: a } = await ctx.db.from("alerts").select("language, contact_phone").eq("id", alertId).maybeSingle();
   if (!a) return null;
   const it = (a.language ?? "en").startsWith("it");
-  const summary = objects.slice(0, 3).join(", ").replace(/\s*-\s*Nr:.*$/i, "").toLowerCase();
+  const { data: itemRow } = await ctx.db.from("items").select("description_en").eq("id", itemId).maybeSingle();
+  const italianSummary = objects.slice(0, 3).map((o) => o.replace(/\s*-\s*(Nr|IMEI):.*$/i, "")).join(", ").toLowerCase();
+  const summary = !it && itemRow?.description_en ? itemRow.description_en.replace(/\.$/, "") : italianSummary;
   try {
     if (a.contact_phone) {
       const call = await outboundCall(a.contact_phone, a.language ?? "en", summary);
@@ -181,6 +190,7 @@ Policy (the office's rules, already decided):
 - Never include full document or card numbers (keep the masked form "XXXXX* * * *"), never ask for payments or bank details, never invent contacts. Identity documents are returned free; embassies are exempt from custody fees.
 - Every message must contain the placeholder {VERIFY_URL} (replaced with a signed verification link) and the pickup link you are given.
 - Keep messages short and clear. Write alert notifications in the alert's language.
+Work efficiently: call independent tools in parallel in the same turn (e.g. lookup_embassy and find_alert_matches together), and draft all messages and call finish in one turn when you can. The item is given to you; call get_item only if you need it again.
 When done, call finish with the main decision and a one-sentence reason for the operator.`;
 
 export async function route(ctx: Ctx, itemId: string) {
@@ -239,7 +249,7 @@ export async function route(ctx: Ctx, itemId: string) {
     try {
       const r = await runToolLoop({
         system: ROUTING_SYSTEM,
-        user: `Route item ${itemId}. Pickup link (Italian): ${pickupIt}\nPickup link (English): ${pickupEn}\n` +
+        user: `Route item ${itemId}: ${JSON.stringify(it)}\nPickup link (Italian): ${pickupIt}\nPickup link (English): ${pickupEn}\n` +
           `Required by policy: ${JSON.stringify(required)}${hold_reason ? `\nNote: ${hold_reason}` : ""}`,
         tools, maxTurns: 10,
       });

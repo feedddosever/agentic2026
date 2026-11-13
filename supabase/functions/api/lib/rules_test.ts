@@ -54,3 +54,11 @@ Deno.test("description never contains a full document number", () => {
   assert(!f.description_en.includes("EL6559123"));
   assert(f.description_en.includes("EL655* * * *"));
 });
+
+import { normObject, prefixesOf, idDocKind } from "./engine.ts";
+Deno.test("model output is normalised to the catalogue spelling", () => {
+  const objs = ["Carta d'identità estera - NR: 23AB4* * * *", "telefono cellulare - imei: 35366* * * *"].map(normObject);
+  assertEquals(objs[0], "CARTA IDENTITA' ESTERA - Nr: 23AB4* * * *");
+  assertEquals(prefixesOf(objs), ["23AB4", "35366"]);
+  assertEquals(idDocKind(objs), "foreign");
+});

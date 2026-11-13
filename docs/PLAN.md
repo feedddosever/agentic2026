@@ -148,22 +148,22 @@ Choices and why:
 - **Accept:** smoke script green against the deployed function; English query "black wallet with US passport" returns relevant items when the agent passes Italian terms.
 
 ### P3 ElevenLabs voice agent (22:00–23:30)  · needs ElevenLabs key
-- [ ] `agents/elevenlabs/agent.json`: prompt, languages (it, en, es, fr, de, zh, ja…), server tools mapped to P2 routes, knowledge base (service page, Delibera 421/2023 fees, c.c. 927–931, hours).
+- [x] `agents/elevenlabs/agent.json`: prompt, languages (it, en, es, fr, de, zh, ja…), server tools mapped to P2 routes, knowledge base (service page, Delibera 421/2023 fees, c.c. 927–931, hours).
 - [x] `agents/elevenlabs/setup.ts` creates/updates the agent through the API (reproducible).
-- [ ] Post-call data collection → `/webhooks/elevenlabs` → `calls`.
-- [ ] Browser widget embed snippet for the Lovable app; Twilio number if the builder provides one.
+- [x] Post-call data collection → `/webhooks/elevenlabs` → `calls`.
+- [x] Browser widget embed snippet for the Lovable app; Twilio number if the builder provides one.
 - **Accept:** a test conversation in English finds a passport by prefix, states fees, sends the pickup pack link; a conversation in Italian files an alert.
 
 ### P4 Exa: embassies and other offices (23:30–01:00)  · needs Exa key
-- [ ] `agents/exa/build_embassies.ts`: Exa Agent API run per country with structured output → `embassies` (start with the 30 countries most present among tourists; expand if time).
+- [x] `agents/exa/build_embassies.ts`: Exa Agent API run per country with structured output → `embassies` (start with the 30 countries most present among tourists; expand if time).
 - [x] `/tools/other-offices`: Exa search + contents restricted to official domains, Claude summarises to a short list with hours and contacts.
-- [ ] Exa Monitor (or scheduled re-run) to keep embassy contacts fresh.
+- [x] Exa Monitor (or scheduled re-run) to keep embassy contacts fresh.
 - **Accept:** `embassies` has ≥ 30 rows with a source URL each; "lost my bag on metro line A" returns ATAC's office with current contacts.
 
 ### P5 Return engine and operator intake (01:00–03:30)  · needs Anthropic key
 - [x] `/intake`: photo + dictation → Claude vision → structured fields (objects, colour, brand, nationality of documents, found where, finder channel); masks document numbers like the official list.
 - [x] `/engine/route`: agent loop with tools `classify`, `lookup_embassy`, `exa_find_mission` (fallback), `draft_notice`, `log_custody`; writes `outbox` rows in the right language; Italian docs → App IO-style notice; foreign docs → embassy batch; others → `/alerts/match`.
-- [ ] Daily embassy batch view (grouped outbox per mission).
+- [x] Daily embassy batch view (grouped outbox per mission).
 - **Accept:** a photo of a wallet with a (sample) foreign passport ends as an embassy outbox draft addressed to the right consulate, plus a custody event.
 
 ### P6 Avalanche (03:30–05:00)  · needs a funded testnet wallet
@@ -270,3 +270,15 @@ Choices and why:
 - [10] Docs: README, ARCHITECTURE, DEMO (script, Q&A, fallbacks, video plan), ACTIVATION (what to run when
   each key/fund arrives), SUBMISSION (form fields). Lovable prompts updated to the final API (agent trace drawer,
   system tab, widget id from `/config`). Added operator routes `/items/:id/trace` and `/embassies`.
+- [11] Keys in. Live and tested end to end:
+  - ElevenLabs agent `agent_3401m7b4cffre9cvd3wcyzzazdge` (LLM claude-sonnet-5-5, ElevenLabs' recommendation for
+    tool use; 6 webhook tools; 8 languages; widget language selector). Tested over its public WebSocket in
+    English (prefix → verify → fees → pickup pack, all correct) and Italian (no false match; offers alert).
+    Change: prompt uses the `timezone` setting instead of a `{{system__time_utc}}` placeholder; the knowledge
+    base is replaced by tool results (office facts come from the API, so they can't drift).
+  - Exa: 32 consulates built (each with an official source URL, ~6 s each); other-offices tool live.
+  - Claude intake + routing agent: 27 s per intake (3 s understanding, ~20 s routing in 3 turns with parallel
+    tools). Fixed: model spellings normalised to the catalogue (CARTA IDENTITA', Nr:) so prefixes/doc kind work.
+  - Full scenario: alert → intake → US Embassy draft (real consular address) + email to alert author + ElevenLabs
+    voice note (MP3), all signed. The policy guard did not need to add anything.
+  - Embassy refresh is a re-run of `scripts/build-embassies.sh` (not an Exa Monitor): simpler, same result.

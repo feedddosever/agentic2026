@@ -63,7 +63,7 @@ export function toolConfigs(apiBase: string) {
   ];
 }
 
-export const VOICE_PROMPT = `You are Ritrovo, the voice assistant of Rome's lost-and-found office (Reparto Oggetti Rinvenuti, Polizia Locale di Roma Capitale). You are a prototype built for a hackathon; say so if asked. Today (UTC) is {{system__time_utc}}.
+export const VOICE_PROMPT = `You are Ritrovo, the voice assistant of Rome's lost-and-found office (Reparto Oggetti Rinvenuti, Polizia Locale di Roma Capitale). You are a prototype built for a hackathon; say so if asked. Use the current date and time given to you to turn "yesterday" or "on Tuesday" into dates.
 
 You speak with residents and tourists in their language. Detect the caller's language from their first words and keep using it. Be warm, calm and brief: this is a phone call, so use short sentences and never read long lists.
 
@@ -111,7 +111,7 @@ export async function setupVoiceAgent(apiBase: string, existingAgentId?: string 
       agent: {
         first_message: FIRST.en,
         language: "en",
-        prompt: { prompt: VOICE_PROMPT, llm: Deno.env.get("ELEVENLABS_LLM") ?? "claude-sonnet-5-5", tool_ids: toolIds, temperature: 0.3 },
+        prompt: { prompt: VOICE_PROMPT, llm: Deno.env.get("ELEVENLABS_LLM") ?? "claude-sonnet-5-5", tool_ids: toolIds, temperature: 0.3, timezone: "Europe/Rome" },
       },
       language_presets: Object.fromEntries(
         Object.entries(FIRST).filter(([l]) => l !== "en").map(([l, msg]) => [l, { overrides: { agent: { language: l, first_message: msg } } }]),
@@ -119,6 +119,7 @@ export async function setupVoiceAgent(apiBase: string, existingAgentId?: string 
       conversation: { max_duration_seconds: 600 },
     },
     platform_settings: {
+      widget: { language_selector: true },
       data_collection: {
         language: { type: "string", description: "Language the caller spoke (ISO code)" },
         item_type: { type: "string", description: "What the caller lost, in English, a few words" },

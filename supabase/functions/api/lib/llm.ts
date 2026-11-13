@@ -22,7 +22,9 @@ const INTAKE_SCHEMA = {
         "One line per object in the style of Rome's official found-items list: Italian, UPPERCASE, e.g. " +
         "\"PORTAFOGLI\", \"PASSAPORTO ESTERO - Nr: EL655* * * *\", \"CARTA DI CREDITO ESTERA VISA\", " +
         "\"TELEFONO CELLULARE - APPLE IPHONE\", \"DENARO EURO 40\". For identity documents add ESTERO/ESTERA when not Italian. " +
-        "Document, card and IMEI numbers: keep only the first 5 characters followed by \"* * * *\".",
+        "Use the register's exact spellings: CARTA IDENTITA' (never CARTA D'IDENTITA'), PATENTE DI GUIDA, TESSERA SANITARIA, " +
+        "PASSAPORTO, PERMESSO DI SOGGIORNO, with ESTERO/ESTERA for foreign ones, and numbers written as \" - Nr: XXXXX* * * *\" " +
+        "(IMEI as \" - IMEI: XXXXX* * * *\"): keep only the first 5 characters followed by \"* * * *\".",
     },
     colour: { type: "string", description: "Main colour in Italian uppercase (NERO, MARRONE...) or empty" },
     brand: { type: "string", description: "Brand in uppercase or empty" },
