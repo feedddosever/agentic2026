@@ -292,3 +292,10 @@ Choices and why:
   fired with correct parameters, "yesterday" resolved via timezone). Operator side: `POST /intake/preview` (4.9 s,
   nothing saved) + `fields` on `/intake` (mode "operator" in the trace). Lovable prompts 9–10. APP_URL set to
   https://screenshot-to-spark-3870.lovable.app (not yet published at the time of writing).
+- [14] Browser test of the published app (https://screenshot-to-spark-3870.lovable.app): citizen search, ownership
+  check, pickup pack (voice-filled names), alert form (voice-filled), verify page, operator console (intake preview →
+  confirm → routed → onchain, agent trace, queue sheet, outbox batches with voice note, system tab with 32 consulates)
+  all work. Privacy bug found and fixed: alphanumeric document numbers (e.g. German ID L01X00T47) and phone numbers
+  in operator notes were not masked in the stored note and the agent trace. New shared `maskIds` (6+ alphanumeric
+  chars with ≥3 digits; URLs and record ids protected) is used everywhere; regression tests added (10 rule tests).
+  Operator token rotated after testing. Lovable prompt 11 for three small UI fixes.

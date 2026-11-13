@@ -299,3 +299,15 @@ Step 2 – Confirm: button "Confirm and save" → POST {API_BASE}/intake with
 before (item, understanding, routing, custody); understanding.mode is now "operator": show the badge
 "Confirmed by operator". Keep the existing three-step result panel and the agent trace drawer.
 ```
+
+## Prompt 11: fixes found in browser testing
+
+```
+Three small fixes in Ritrovo:
+1. Home search: pressing Enter in either search tab must run the search (wrap each tab's fields in a <form> with
+   onSubmit that calls the same handler as the Search button).
+2. Agent trace drawer: the run "mode" can be "llm", "rules" or "operator". Show "AI · {model}" for llm,
+   "Confirmed by operator" for operator, and "rules" only for rules (right now operator runs show "rules").
+3. Operator intake: after "Confirm and save" succeeds, clear the Note textarea and the photo (the raw note may
+   contain full document numbers; the saved record is already masked). Keep the result panel visible.
+```

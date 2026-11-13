@@ -59,11 +59,23 @@ export const maskNumber = (n: string) => {
   return clean.length <= 4 ? "* * * *" : `${clean.slice(0, 5)}* * * *`;
 };
 
+// Document / card / IMEI / phone numbers: tokens of 6+ letters-and-digits with at least 3 digits
+// (e.g. EL6559123, L01X00T47, 356789104455667). URLs and Ritrovo record ids are left alone.
+const ID_LIKE = /\b(?=(?:[A-Z]*\d){3})[A-Z0-9]{6,24}\b/gi;
+const PROTECT = /https?:\/\/\S+|\bIN-\d{6}-[A-Z0-9]{4}\b|\{VERIFY_URL\}/gi;
+
+/** Mask every identifier-like token in free text (operator notes, model output, message bodies). */
+export function maskIds(s: string): string {
+  const kept: string[] = [];
+  const shielded = s.replace(PROTECT, (m) => { kept.push(m); return `\u0000${kept.length - 1}\u0000`; });
+  return shielded.replace(ID_LIKE, (m) => maskNumber(m)).replace(/\u0000(\d+)\u0000/g, (_, i) => kept[Number(i)]);
+}
+
 export function parseNote(note: string, foundWhere = "", finderChannel = ""): IntakeFields {
   const text = `${note} ${foundWhere}`;
   const country = detectCountry(note);
   const foreign = !!country && country.code !== "IT";
-  const numbers = [...note.matchAll(/\b([A-Z]{1,3}\d{5,9}|\d{9,16})\b/gi)].map((m) => m[1]);
+  const numbers = [...note.replace(PROTECT, " ").matchAll(ID_LIKE)].map((m) => m[0]);
   let numIdx = 0;
   const objects: string[] = [];
   for (const [re, label] of OBJECT_WORDS) {
@@ -88,7 +100,7 @@ export function parseNote(note: string, foundWhere = "", finderChannel = ""): In
     found_where: foundWhere || (note.match(/\b(?:a|at|in|presso|near)\s+([A-Z][\w' ]{2,40})/)?.[1] ?? ""),
     finder_channel: finderChannel || CHANNELS.find(([re]) => re.test(note))?.[1] || "",
     cash_eur: cash ? Number(cash[1].replace(",", ".")) : -1,
-    description_en: note.replace(/\b([A-Z]{1,3}\d{5,9}|\d{9,19})\b/gi, (m) => maskNumber(m)).slice(0, 300),
+    description_en: maskIds(note).slice(0, 300),
   };
 }
 

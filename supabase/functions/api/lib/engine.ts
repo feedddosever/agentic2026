@@ -1,7 +1,7 @@
 // Return engine: intake → understand → custody → route (agent + policy guard) → signed outbox → alerts.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2.49.4";
 import { understandIntake, runToolLoop, llmEnabled, MODEL, type ToolSpec, type Step } from "./llm.ts";
-import { parseNote, maskNumber, requiredChannels, templateAppIo, templateEmbassy, templateAlertMatch, type ItemForRouting } from "./rules.ts";
+import { parseNote, maskNumber, maskIds, requiredChannels, templateAppIo, templateEmbassy, templateAlertMatch, type ItemForRouting } from "./rules.ts";
 import { countryByCode } from "./countries.ts";
 import { exaEnabled, findMission } from "./exa.ts";
 import { signPayload, writeCustody, hashJson, explorerTx, type CustodyEvent } from "./chain.ts";
@@ -39,7 +39,7 @@ const PREFIX = /(?:\bNr|\bIMEI)\s*:\s*([A-Z0-9][A-Z0-9 ./\-]*?)\s*\*/gi;
 export const prefixesOf = (objs: string[]) =>
   [...new Set(objs.flatMap((o) => [...o.matchAll(PREFIX)].map((m) => m[1].toUpperCase().replace(/[^A-Z0-9]/g, "")).filter((p) => p.length >= 3)))];
 /** Remove full document/card/IMEI numbers from free text (operator notes). */
-export const maskFreeText = (s: string) => s.replace(/\b([A-Z]{1,3}\d{5,9}|\d{9,19})\b/gi, (m) => maskNumber(m));
+export const maskFreeText = (s: string) => maskIds(s);
 export const maskContact = (phone?: string | null, email?: string | null) =>
   phone ? phone.slice(0, 3) + " " + phone.slice(3).replace(/\d(?=\d{2})/g, "*") : email ? email.replace(/^(.).*(@.*)$/, "$1***$2") : "";
 

@@ -62,3 +62,20 @@ Deno.test("model output is normalised to the catalogue spelling", () => {
   assertEquals(prefixesOf(objs), ["23AB4", "35366"]);
   assertEquals(idDocKind(objs), "foreign");
 });
+
+import { maskIds } from "./rules.ts";
+Deno.test("masks alphanumeric ids, IMEIs and phones but not words, dates, links or record ids", () => {
+  const s = maskIds("Carta d'identita tedesca numero L01X00T47, IMEI 356789104455667, tel 3331234567, bus 64, " +
+    "13/11/2026, 40 euro, record IN-261113-D572, https://x.app/verify/4612b5cc-269a-4fc1-9a88-61db89bed6c8 {VERIFY_URL}");
+  assert(!s.includes("L01X00T47") && s.includes("L01X0* * * *"));
+  assert(!s.includes("356789104455667") && !s.includes("3331234567"));
+  for (const keep of ["bus 64", "13/11/2026", "40 euro", "IN-261113-D572", "4612b5cc-269a-4fc1-9a88-61db89bed6c8", "{VERIFY_URL}", "tedesca"]) {
+    assert(s.includes(keep), keep);
+  }
+});
+
+Deno.test("parser takes an alphanumeric document number as the ownership prefix", () => {
+  const f = parseNote("Portafoglio con carta d'identita tedesca L01X00T47");
+  assert(f.objects.some((o) => o === "CARTA IDENTITA' ESTERA - Nr: L01X0* * * *"), JSON.stringify(f.objects));
+  assertEquals(f.nationality, "DE");
+});
