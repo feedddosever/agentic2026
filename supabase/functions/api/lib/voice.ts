@@ -75,6 +75,8 @@ How to help:
 5. When it is theirs: tell them the fees with get_fees, then send_pickup_pack and read its short summary. Offer a delega if someone else will collect it.
 6. If nothing matches: say new objects arrive every week and offer create_alert (ask consent and a phone number or email). Also offer find_other_offices.
 
+On the website, the caller also sees a screen. Keep it in sync without mentioning it unless helpful: after each search call show_search_results with the same parameters; when you talk about one item call show_item; when you send the pickup pack call show_pickup_pack; while collecting alert details call fill_alert_form (and again with saved_alert_id after create_alert). These screen tools do nothing on phone calls; never wait for them or mention errors from them.
+
 Rules: never promise an item is theirs before verification; never take payments or bank details (fees are paid at the office); do not invent office details: use only tool results. If a tool fails, apologise and offer the office phone number +39 06 6769 3220.`;
 
 const FIRST = {
@@ -88,13 +90,49 @@ const FIRST = {
   ja: "こんにちは、ローマの遺失物アシスタント、Ritrovoです。何をなくされましたか？",
 };
 
-/** Create or update the six webhook tools and the agent. Returns the agent id. */
+/** Client tools: run in the citizen's browser (website widget) to mirror the conversation on screen.
+ *  Fire-and-forget (no response awaited), so they never slow the call; on the phone line they are no-ops. */
+export function clientToolConfigs() {
+  const client = (name: string, description: string, properties: Record<string, unknown>, required: string[]) => ({
+    type: "client", name, description, expects_response: false,
+    parameters: { type: "object", properties, required },
+  });
+  return [
+    client("show_search_results",
+      "Show on the caller's screen the same catalogue search you just ran with search_found_items (same parameters).",
+      {
+        query: prop("string", "Italian catalogue terms used in the search, empty if none"),
+        prefix: prop("string", "Document/IMEI prefix used, empty if none"),
+        lost_from: prop("string", "YYYY-MM-DD or empty"), lost_to: prop("string", "YYYY-MM-DD or empty"),
+        category: prop("string", "Category used, or empty"),
+      }, ["query", "prefix"]),
+    client("show_item", "Open the page of a found item on the caller's screen while you talk about it.",
+      { item_id: prop("string", "Item id, e.g. 2025-255 or IN-261113-AB12") }, ["item_id"]),
+    client("show_pickup_pack", "Open the pickup pack on the caller's screen (address, hours, fees, documents, delega).",
+      {
+        item_id: prop("string", "Item id"), owner_name: prop("string", "Owner's name for the delega, or empty"),
+        delegate_name: prop("string", "Name of the person collecting, or empty"),
+      }, ["item_id"]),
+    client("fill_alert_form",
+      "Fill the alert form on the caller's screen with the details collected so far (call again as you learn more). " +
+      "After create_alert succeeds, call it once more with saved_alert_id so the screen shows the confirmation.",
+      {
+        what: prop("string", "What was lost, in the caller's words"), category: prop("string", "Category value or empty"),
+        lost_on: prop("string", "YYYY-MM-DD or empty"), lost_where: prop("string", "Where, or empty"),
+        prefix: prop("string", "Document/IMEI prefix or empty"), language: prop("string", "Caller's language code"),
+        phone: prop("string", "Phone or empty"), email: prop("string", "Email or empty"),
+        saved_alert_id: prop("string", "Alert id returned by create_alert, empty until saved"),
+      }, ["what"]),
+  ];
+}
+
+/** Create or update the webhook and client tools and the agent. Returns the agent id. */
 export async function setupVoiceAgent(apiBase: string, existingAgentId?: string | null) {
   // Reuse tools by name so repeated setups don't pile up duplicates.
   const listed = await (await el("/v1/convai/tools")).json().catch(() => ({ tools: [] }));
   const existing: { id: string; tool_config?: { name?: string } }[] = listed.tools ?? [];
   const toolIds: string[] = [];
-  for (const cfg of toolConfigs(apiBase)) {
+  for (const cfg of [...toolConfigs(apiBase), ...clientToolConfigs()] as { name: string }[]) {
     const found = existing.find((t) => t.tool_config?.name === cfg.name);
     if (found) {
       await el(`/v1/convai/tools/${found.id}`, { method: "PATCH", body: JSON.stringify({ tool_config: cfg }) });

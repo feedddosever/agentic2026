@@ -115,7 +115,8 @@ Choices and why:
 | `POST /tools/pickup-pack` | voice agent, app | `{item_id, language, owner_name?, delegate_name?}` → link to pickup page (fees, hours, map, documents, pre-filled delega PDF) |
 | `POST /tools/alert` | voice agent, app | `{what, lost_on, lost_where, prefix?, language, phone?, email?}` → alert id |
 | `POST /tools/other-offices` | voice agent, app | `{what, where, when}` → Exa-backed list of other lost-and-found offices (ATAC, Trenitalia, Italo, airports, taxi, Vatican) |
-| `POST /intake` | operator console | photo + dictation text → structured item (Claude vision) → insert → route |
+| `POST /intake/preview` | operator console | photo + dictation → proposed register entry, nothing saved |
+| `POST /intake` | operator console | photo + dictation text → structured item (Claude vision) → insert → route | (accepts operator-confirmed `fields`) |
 | `POST /engine/route` | intake, importer | `{item_id}` → decision + outbox rows + custody event |
 | `POST /alerts/match` | intake, importer | `{item_ids}` → matches → callback (call or demo notification) |
 | `POST /webhooks/elevenlabs` | ElevenLabs | post-call data → `calls` |
@@ -286,3 +287,8 @@ Choices and why:
   ERC-8004 agentId 302 and bound to the contract; registration file lists the registration back. Full lifecycle
   (intake → routed → returned) confirmed by receipts (blocks 61019494/508/511). Setup gas cost ≈ 0.0000000002 AVAX.
   Source verification on Snowtrace not done (optional).
+- [13] Voice autofill (builder's idea). Citizen side: 4 ElevenLabs client tools (show_search_results, show_item,
+  show_pickup_pack, fill_alert_form), fire-and-forget, registered by the widget; tested over WebSocket (all four
+  fired with correct parameters, "yesterday" resolved via timezone). Operator side: `POST /intake/preview` (4.9 s,
+  nothing saved) + `fields` on `/intake` (mode "operator" in the trace). Lovable prompts 9–10. APP_URL set to
+  https://screenshot-to-spark-3870.lovable.app (not yet published at the time of writing).

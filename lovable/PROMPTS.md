@@ -244,3 +244,58 @@ styles, colour contrast in light and dark mode, loading and error states for eve
 translations for every visible string. Add a favicon (key icon) and page titles per route
 ("Ritrovo – Find my item", etc.).
 ```
+
+## Prompt 9: voice fills the screen (citizen side)
+
+```
+In Ritrovo, make the voice assistant drive the screen while the person talks. The ElevenLabs agent calls
+"client tools" that run in the browser; register them on the widget.
+
+1. Create src/lib/voiceTools.ts with a function registerVoiceTools(widget: HTMLElement, navigate) that adds:
+   widget.addEventListener("elevenlabs-convai:call", (event: any) => {
+     event.detail.config.clientTools = {
+       show_search_results: ({ query, prefix, lost_from, lost_to, category }) => navigate("/?" + params),
+       show_item: ({ item_id }) => navigate(`/item/${item_id}`),
+       show_pickup_pack: ({ item_id, owner_name, delegate_name }) => navigate(`/pickup/${item_id}?owner=..&delegate=..`),
+       fill_alert_form: ({ what, category, lost_on, lost_where, prefix, language, phone, email, saved_alert_id }) =>
+         navigate("/alert?" + params),
+     };
+   });
+   Build the query strings with URLSearchParams and skip empty values. Each function returns nothing.
+   Call registerVoiceTools from the component that renders <elevenlabs-convai> (useRef + useEffect after the element
+   is in the DOM; pass react-router's navigate).
+
+2. Make the pages read those query parameters:
+   - "/": if any of q, prefix, lost_from, lost_to, category is present, switch to the right search tab, fill the
+     fields (q goes into the "Describe it" text as is: it is already Italian catalogue terms) and run the search
+     automatically, then scroll to the results.
+   - "/pickup/:id": prefill "your name" from ?owner and "their name" from ?delegate.
+   - "/alert": prefill every field from the query (what, category, lost_on, lost_where, prefix, language, phone,
+     email). If saved_alert_id is present, show the success card ("Alert saved by voice", with the id) instead of
+     the submit button.
+   When a field is filled from the voice assistant, highlight it briefly (soft terracotta glow for 1.5 s) and show a
+   small chip "Filled by voice" next to the form title.
+```
+
+## Prompt 10: dictate, review, confirm (operator intake)
+
+```
+Change Tab 1 "Intake" of "/operator" in Ritrovo to a two-step flow: the AI proposes, the operator confirms.
+
+Step 1 – Propose: after a photo is selected, or when dictation stops (SpeechRecognition onend), or 1.5 s after the
+operator stops typing the note, call POST {API_BASE}/intake/preview (operator header) with
+{photo_base64, note, found_where, finder_channel}. Nothing is saved. Response:
+  { fields: { objects: string[], colour, brand, nationality, found_where, finder_channel, cash_eur, description_en },
+    derived: { id_doc: "none"|"italian"|"foreign"|"mixed", prefixes: string[], categories: string[] },
+    mode: "llm"|"rules", model: string|null, error: string|null }
+Show an editable form filled with these values: objects as an editable list (one line each, add/remove buttons),
+colour, brand, nationality (2-letter country code), found where, handed in by, cash in euro (-1 = none, show as
+empty), English description. Above it, badges from "derived" (document type, ownership prefixes, categories) and
+"Proposed by AI (model)" or "Proposed by rules". Re-run the preview if the operator records a new note or photo,
+but never overwrite fields the operator has edited by hand.
+
+Step 2 – Confirm: button "Confirm and save" → POST {API_BASE}/intake with
+{photo_base64, note, found_where, finder_channel, fields: <the edited form values>}. The response is the same as
+before (item, understanding, routing, custody); understanding.mode is now "operator": show the badge
+"Confirmed by operator". Keep the existing three-step result panel and the agent trace drawer.
+```

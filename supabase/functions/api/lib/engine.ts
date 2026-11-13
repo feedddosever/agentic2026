@@ -93,14 +93,37 @@ export async function alertMatches(ctx: Ctx, itemId: string) {
 }
 
 // ---------- intake ----------
-export async function intake(ctx: Ctx, input: { photo_base64?: string; media_type?: string; note?: string; found_where?: string; finder_channel?: string }) {
+type IntakeInput = { photo_base64?: string; media_type?: string; note?: string; found_where?: string; finder_channel?: string; fields?: Partial<IntakeFieldsIn> };
+type IntakeFieldsIn = { objects: string[]; colour: string; brand: string; nationality: string; found_where: string; finder_channel: string; cash_eur: number; description_en: string };
+
+/** Proposed register entry from photo + dictation, nothing saved (operator reviews, edits, then confirms). */
+export async function previewIntake(input: IntakeInput) {
+  const rawNote = (input.note ?? "").slice(0, 2000);
+  const note = maskFreeText(rawNote);
+  let f = parseNote(rawNote, input.found_where, input.finder_channel);
+  let mode: "llm" | "rules" = "rules", model: string | null = null, error: string | null = null;
+  if (llmEnabled()) {
+    try {
+      const r = await understandIntake({ photo_b64: input.photo_base64, media_type: input.media_type, note, found_where: input.found_where, finder_channel: input.finder_channel });
+      if (r) { f = { ...r.fields, objects: r.fields.objects.map((o) => normObject(maskFreeText(o))).filter(Boolean), description_en: maskFreeText(r.fields.description_en) }; mode = "llm"; model = r.model; }
+    } catch (e) { error = String((e as Error).message ?? e).slice(0, 300); }
+  }
+  const objects = f.objects.length ? f.objects : ["ALTRO (Oggettistica)"];
+  return {
+    fields: { ...f, objects, nationality: /^[A-Z]{2}$/.test(f.nationality ?? "") ? f.nationality : "" },
+    derived: { id_doc: idDocKind(objects), prefixes: prefixesOf(objects), categories: [...new Set(objects.map(categorize))].sort() },
+    mode, model, error,
+  };
+}
+
+export async function intake(ctx: Ctx, input: IntakeInput) {
   // Full document/card numbers never leave this function: the LLM, logs and DB only see masked numbers.
   const rawNote = (input.note ?? "").slice(0, 2000); // only the local rule parser sees it (it masks its own output)
   const note = maskFreeText(rawNote);
   const steps: Step[] = [];
-  let mode: "llm" | "rules" = "rules", model: string | null = null, llmError: string | null = null;
+  let mode: "llm" | "rules" | "operator" = "rules", model: string | null = null, llmError: string | null = null;
   let f = parseNote(rawNote, input.found_where, input.finder_channel);
-  if (llmEnabled()) {
+  if (llmEnabled() && !(input.fields && Array.isArray(input.fields.objects) && input.fields.objects.length)) {
     try {
       const t0 = Date.now();
       const r = await understandIntake({ photo_b64: input.photo_base64, media_type: input.media_type, note, found_where: input.found_where, finder_channel: input.finder_channel });
@@ -113,6 +136,19 @@ export async function intake(ctx: Ctx, input: { photo_base64?: string; media_typ
     } catch (e) {
       llmError = String((e as Error).message ?? e).slice(0, 300);
     }
+  }
+  if (input.fields && Array.isArray(input.fields.objects) && input.fields.objects.length) {
+    // Operator reviewed (and possibly edited) the proposed entry: their version wins.
+    const c = input.fields;
+    f = {
+      objects: (c.objects ?? []).map((o) => normObject(maskFreeText(String(o)))).filter(Boolean).slice(0, 20),
+      colour: String(c.colour ?? ""), brand: String(c.brand ?? ""), nationality: String(c.nationality ?? "").toUpperCase(),
+      found_where: String(c.found_where ?? input.found_where ?? ""), finder_channel: String(c.finder_channel ?? input.finder_channel ?? ""),
+      cash_eur: Number.isFinite(Number(c.cash_eur)) ? Number(c.cash_eur) : -1, description_en: maskFreeText(String(c.description_en ?? "")),
+    };
+    mode = "operator";
+    steps.length = 0;
+    steps.push({ tool: "operator_confirmed_fields", input: { note }, output: f, ms: 0 });
   }
   if (mode === "rules") steps.push({ tool: "rule_parser", input: { note }, output: f, ms: 0 });
 

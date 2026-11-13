@@ -6,7 +6,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.49.4";
 import { OFFICE, computeFees, claimHorizon, documentsToBring } from "./lib/office.ts";
 import { fillDelega } from "./lib/delega.ts";
-import { intake, route, markReturned, flushCustody, alertMatches, scanAlerts, outboxPayload, maskContact, type Ctx } from "./lib/engine.ts";
+import { intake, previewIntake, route, markReturned, flushCustody, alertMatches, scanAlerts, outboxPayload, maskContact, type Ctx } from "./lib/engine.ts";
 import { chainInfo, explorerTx, recoverSigner, hashJson, agentBalance, agentAddress, anchorDataset, AGENT_ID, IDENTITY_REGISTRY } from "./lib/chain.ts";
 import { exaEnabled, otherOffices, findMission } from "./lib/exa.ts";
 import { llmEnabled, MODEL } from "./lib/llm.ts";
@@ -327,6 +327,10 @@ Deno.serve(async (req) => {
       }
       if (!isOperator) return bad("operator token required", 401);
       switch (path) {
+        case "/intake/preview": {
+          if (!body.photo_base64 && !body.note) return bad("photo_base64 or note required");
+          return json(await previewIntake(body));
+        }
         case "/intake": {
           if (!body.photo_base64 && !body.note) return bad("photo_base64 or note required");
           return json(await intake(ctx, body));
