@@ -235,37 +235,38 @@ Choices and why:
 
 ## 11. Change log
 
-- 18:30 Plan written.
-- 19:40 P0: the original Supabase account hit the free 2-project limit; the builder chose a new
+- [0] 18:30 Plan written. (Later entries are numbered in order; all of them were made on Friday
+  between 18:30 and 19:30 CET, ahead of the schedule above.)
+- [1] P0: the original Supabase account hit the free 2-project limit; the builder chose a new
   account instead of pausing a project. Access is through a personal access token (Management API)
   instead of the Supabase MCP connector. The new account's existing project `agentic2026` is used.
   A dedicated cloud environment `agentic2026` (limited network) holds this project's secrets.
-- 19:40 P1 done: 15,843 items loaded; `id_doc` + `prefixes` added (9,109 records with an ownership
+- [2] P1 done: 15,843 items loaded; `id_doc` + `prefixes` added (9,109 records with an ownership
   prefix); both datasets fingerprinted (PDF sha256 + Merkle root).
-- 20:05 P2 done: `api` edge function deployed (verify_jwt off; public tools, operator routes will check
+- [3] P2 done: `api` edge function deployed (verify_jwt off; public tools, operator routes will check
   `x-operator-token`); 15/15 smoke tests pass; delega PDF pre-fill verified visually. The pickup *page* is
   served as JSON by the API and rendered by the Lovable app (P8).
-- 20:05 Keys: `api.anthropic.com` bypasses the egress proxy, so injected credentials can't reach it from
+- [4] Keys: `api.anthropic.com` bypasses the egress proxy, so injected credentials can't reach it from
   this container. Decision: every sponsor/LLM key lives only in Supabase Edge Function secrets, and
   one-off jobs (ElevenLabs agent setup, embassy directory build) run as operator-only routes of the edge
   function. The builder enters each key once, in the Supabase dashboard.
-- 20:05 Order change while keys are pending: P6 (contract, no key needed) and P8 prompts move ahead of
+- [5] Order change while keys are pending: P6 (contract, no key needed) and P8 prompts move ahead of
   P3/P4/P5; those start as soon as the keys are in.
-- 20:25 P8 prompts written (8 prompts); operator routes added to the API contract (section 6) so the
+- [6] P8 prompts written (8 prompts); operator routes added to the API contract (section 6) so the
   front end and P5–P7 build against the same spec. Agent/deploy wallet generated (address in `.env`, testnet only).
-- 21:25 P6 (code) done: CustodyLog.sol, 9 Hardhat tests, deploy + ERC-8004 register scripts (dry-run OK on a
+- [7] P6 (code) done: CustodyLog.sol, 9 Hardhat tests, deploy + ERC-8004 register scripts (dry-run OK on a
   local chain). Live deploy waits for test AVAX. Note: ERC-8004 forbids an agent owner from giving its own agent
   feedback, so N1 (public return rate via the Reputation Registry) needs a separate office wallet as reviewer.
-- 21:25 P5 + P7 matcher done in rules mode (no keys): intake → custody → routing agent (Claude tool loop when the
+- [8] P5 + P7 matcher done in rules mode (no keys): intake → custody → routing agent (Claude tool loop when the
   key exists; deterministic policy guard always) → signed outbox (EIP-191 by the agent key; /verify detects
   tampering) → alert matching → returns. Privacy fix: full document numbers are masked before anything is
   stored, logged or sent to the LLM. 7 rule tests + 20 smoke checks pass.
-- 21:55 P3/P4/P7 code done ahead of keys. Changes vs plan: the ElevenLabs setup runs as an operator route of the
+- [9] P3/P4/P7 code done ahead of keys. Changes vs plan: the ElevenLabs setup runs as an operator route of the
   edge function (`/admin/setup-voice-agent`, key stays in Supabase) instead of a local `setup.ts`; call analytics
   are pulled with `/admin/sync-calls` instead of a post-call webhook (no workspace webhook secret needed);
   `/tools/other-offices` uses Exa's structured output directly (no extra Claude call). Sentinel importer verified
   against the live city page (idempotent) and on a simulated new list (40 items re-imported, prefix alert
   notified). `scripts/reset-demo.sh` clears demo data.
-- 22:10 Docs: README, ARCHITECTURE, DEMO (script, Q&A, fallbacks, video plan), ACTIVATION (what to run when
+- [10] Docs: README, ARCHITECTURE, DEMO (script, Q&A, fallbacks, video plan), ACTIVATION (what to run when
   each key/fund arrives), SUBMISSION (form fields). Lovable prompts updated to the final API (agent trace drawer,
   system tab, widget id from `/config`). Added operator routes `/items/:id/trace` and `/embassies`.
