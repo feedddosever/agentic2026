@@ -49,6 +49,11 @@ export function computeFees(objects: string[], acquired: string, pickup: Date, r
   return { currency: "EUR", lines, total, notes, days_in_custody: days };
 }
 
+/** Today's date in Rome (YYYY-MM-DD). The office, its records and its callers all live on Rome time. */
+export function romeDate(d: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+}
+
 /** Art. 929 c.c.: after one year from publication an unclaimed item may go to the finder. Indicative only. */
 export function claimHorizon(acquired: string): string {
   const d = new Date(acquired + "T00:00:00Z");

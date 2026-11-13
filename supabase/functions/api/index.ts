@@ -4,14 +4,14 @@
 // Operator (header x-operator-token): /intake, /engine/route, /items/:id/return, /queue, /outbox, /alerts,
 //           /alerts/match, /chain/flush, /admin/status, /admin/embassy
 import { createClient } from "npm:@supabase/supabase-js@2.49.4";
-import { OFFICE, computeFees, claimHorizon, documentsToBring } from "./lib/office.ts";
+import { OFFICE, computeFees, claimHorizon, documentsToBring, romeDate } from "./lib/office.ts";
 import { fillDelega } from "./lib/delega.ts";
 import { intake, previewIntake, route, markReturned, flushCustody, alertMatches, scanAlerts, outboxPayload, maskContact, type Ctx } from "./lib/engine.ts";
 import { chainInfo, explorerTx, recoverSigner, hashJson, agentBalance, agentAddress, anchorDataset, AGENT_ID, IDENTITY_REGISTRY } from "./lib/chain.ts";
 import { exaEnabled, otherOffices, findMission } from "./lib/exa.ts";
 import { llmEnabled, MODEL } from "./lib/llm.ts";
 import { countryByCode } from "./lib/countries.ts";
-import { setupVoiceAgent, recentCalls, voiceEnabled, AGENT_ID as VOICE_AGENT_ID } from "./lib/voice.ts";
+import { setupVoiceAgent, recentCalls, voiceEnabled, tts, stt, AGENT_ID as VOICE_AGENT_ID } from "./lib/voice.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -45,7 +45,7 @@ const addDays = (iso: string, n: number) => {
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 };
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => romeDate();
 
 /** Objects as spoken/read to a citizen: drop empty "Nr: N/D" noise, keep masked numbers. */
 const tidy = (objects: string[]) =>
@@ -353,6 +353,19 @@ Deno.serve(async (req) => {
         case "/admin/setup-voice-agent": {
           if (!voiceEnabled()) return bad("ELEVENLABS_API_KEY not configured", 503);
           return json(await setupVoiceAgent(API_BASE, VOICE_AGENT_ID()));
+        }
+        case "/admin/tts": {
+          if (!voiceEnabled()) return bad("ELEVENLABS_API_KEY not configured", 503);
+          const text = String(body.text ?? "");
+          if (!text) return bad("text required");
+          const bytes = await tts(text, String(body.voice_id ?? "cjVigY5qzO86Huf0OWal"), { model: body.model_id ? String(body.model_id) : undefined });
+          return new Response(new Uint8Array(bytes), { headers: { ...CORS, "Content-Type": "audio/mpeg" } });
+        }
+        case "/admin/stt": {
+          if (!voiceEnabled()) return bad("ELEVENLABS_API_KEY not configured", 503);
+          if (!body.audio_base64) return bad("audio_base64 required");
+          const bin = Uint8Array.from(atob(String(body.audio_base64)), (c) => c.charCodeAt(0));
+          return json(await stt(bin, String(body.filename ?? "call.wav")));
         }
         case "/admin/sync-calls": {
           const rows = await recentCalls();

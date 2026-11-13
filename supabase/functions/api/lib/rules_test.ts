@@ -79,3 +79,10 @@ Deno.test("parser takes an alphanumeric document number as the ownership prefix"
   assert(f.objects.some((o) => o === "CARTA IDENTITA' ESTERA - Nr: L01X0* * * *"), JSON.stringify(f.objects));
   assertEquals(f.nationality, "DE");
 });
+
+import { romeDate } from "./office.ts";
+Deno.test("dates follow Rome time, not UTC", () => {
+  assertEquals(romeDate(new Date("2026-11-13T23:30:00Z")), "2026-11-14");
+  assertEquals(romeDate(new Date("2026-11-13T22:59:00Z")), "2026-11-13");
+  assertEquals(romeDate(new Date("2026-07-01T22:00:00Z")), "2026-07-02");
+});

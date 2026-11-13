@@ -217,3 +217,25 @@ export async function recentCalls() {
   }
   return out;
 }
+
+/** Plain text-to-speech (used to produce the demo video's narration). */
+export async function tts(text: string, voiceId: string, opts: { model?: string; format?: string } = {}): Promise<Uint8Array> {
+  const r = await el(`/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=${opts.format ?? "mp3_44100_128"}`, {
+    method: "POST",
+    body: JSON.stringify({ text: text.slice(0, 2500), model_id: opts.model ?? "eleven_multilingual_v2" }),
+  });
+  return new Uint8Array(await r.arrayBuffer());
+}
+
+/** Speech to text with word timings (used to cut recorded calls for the demo video). */
+export async function stt(audio: Uint8Array, filename = "call.wav") {
+  if (!KEY) throw new Error("ELEVENLABS_API_KEY not configured");
+  const form = new FormData();
+  form.append("model_id", "scribe_v1");
+  form.append("timestamps_granularity", "word");
+  form.append("file", new Blob([new Uint8Array(audio)]), filename);
+  const r = await fetch(`${BASE}/v1/speech-to-text`, { method: "POST", headers: { "xi-api-key": KEY }, body: form, signal: AbortSignal.timeout(60_000) });
+  if (!r.ok) throw new Error(`ElevenLabs ${r.status} /v1/speech-to-text: ${(await r.text()).slice(0, 400)}`);
+  const j = await r.json();
+  return { text: j.text, words: (j.words ?? []).filter((w: { type?: string }) => w.type === "word").map((w: { text: string; start: number; end: number }) => ({ text: w.text, start: w.start, end: w.end })) };
+}

@@ -195,7 +195,7 @@ Choices and why:
 - **Accept:** a fresh reader can run the pipeline and deploy from the README; demo runs in < 3:00.
 
 ### P10 Video and submission (10:00–13:30, feature freeze 12:00)
-- [x] Video script (3:00) and shot list; builder records it.
+- [x] Video script (3:00) and shot list; Italian video produced (see change log [15]); builder can re-record with own voice.
 - [ ] Repo public; live link; submission form fields filled (`docs/SUBMISSION.md`), Avalanche contract address included.
 - **Accept:** submitted before 13:30 (30-minute buffer).
 
@@ -299,3 +299,9 @@ Choices and why:
   in operator notes were not masked in the stored note and the agent trace. New shared `maskIds` (6+ alphanumeric
   chars with ≥3 digits; URLs and record ids protected) is used everywhere; regression tests added (10 rule tests).
   Operator token rotated after testing. Lovable prompt 11 for three small UI fixes.
+- [15] Deviation: the builder asked for the video itself, not only the script, so it was produced here (2:58, Italian
+  narration by ElevenLabs, real English call with the agent, Italian subtitles; tooling in scripts/video/, notes in
+  docs/VIDEO_SCRIPT_IT.md). Operator-only helper routes /admin/tts and /admin/stt were added for it. While
+  recording after midnight a bug showed up: the server's "today" was UTC, so between 00:00 and 01:00/02:00 Rome time
+  the search window ended a day early and new intakes got the previous day's date and id. Fixed with romeDate()
+  (Europe/Rome) and a test (11 rule tests).

@@ -6,6 +6,7 @@ import { countryByCode } from "./countries.ts";
 import { exaEnabled, findMission } from "./exa.ts";
 import { signPayload, writeCustody, hashJson, explorerTx, type CustodyEvent } from "./chain.ts";
 import { voiceEnabled, outboundCall, voiceNote } from "./voice.ts";
+import { romeDate } from "./office.ts";
 
 export type Ctx = { db: SupabaseClient; pickupUrl: (id: string, lang: string) => string; verifyUrl: (outboxId: string) => string };
 
@@ -152,7 +153,7 @@ export async function intake(ctx: Ctx, input: IntakeInput) {
   }
   if (mode === "rules") steps.push({ tool: "rule_parser", input: { note }, output: f, ms: 0 });
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = romeDate();
   const id = `IN-${today.replaceAll("-", "").slice(2)}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`;
   let photo_path: string | null = null, photo_sha256: string | null = null;
   if (input.photo_base64) {
