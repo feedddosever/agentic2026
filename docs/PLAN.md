@@ -124,17 +124,17 @@ Choices and why:
 ## 7. Phases, tasks and acceptance criteria
 
 ### P0 Setup and feasibility (18:30–19:00)
-- [ ] Check toolchain: Supabase MCP access, Deno or Supabase CLI, Foundry or solc/viem, Node.
-- [ ] Create Supabase project `ritrovo` (EU region).
+- [x] Check toolchain: Supabase MCP access, Deno or Supabase CLI, Foundry or solc/viem, Node.
+- [x] Supabase project: using `agentic2026` (ref `izrggntqsssfzazjfhht`, eu-west-1) on a new account; see change log.
 - [ ] Repo skeleton: `pipeline/`, `supabase/`, `contracts/`, `agents/`, `lovable/`, `docs/`.
 - [ ] Ask the builder for keys (secure form, when needed, not all at once): Anthropic, ElevenLabs, Exa; later Twilio (optional).
 - **Accept:** project exists, skeleton committed, list of blocked items known.
 
 ### P1 Data into the database (19:00–20:00)
-- [ ] Extend `build_dataset.py`: `id_doc` type, `prefixes` (doc numbers before `*`, IMEI prefixes), `foreign_doc`.
-- [ ] pytest for decoder/parser on fixed pages (page 1 of each year) and prefix extraction.
-- [ ] Migration: tables, indexes (GIN on `fts`, trigram on `description`, GIN on `prefixes`), RLS.
-- [ ] Load 15,843 items; `datasets` row with PDF sha256 + Merkle root.
+- [x] Extend `build_dataset.py`: `id_doc` type, `prefixes` (doc numbers before `*`, IMEI prefixes), `foreign_doc`.
+- [x] pytest for decoder/parser on fixed pages (page 1 of each year) and prefix extraction.
+- [x] Migration: tables, indexes (GIN on `fts`, trigram on `description`, GIN on `prefixes`), RLS.
+- [x] Load 15,843 items; `datasets` row with PDF sha256 + Merkle root.
 - **Accept:** `select count(*) from items` = 15,843; search for `EL655` returns the record; RLS blocks anonymous reads of `alerts`.
 
 ### P2 Search and citizen tools (20:00–22:00)
@@ -233,3 +233,9 @@ Choices and why:
 ## 11. Change log
 
 - 18:30 Plan written.
+- 19:40 P0: the original Supabase account hit the free 2-project limit; the builder chose a new
+  account instead of pausing a project. Access is through a personal access token (Management API)
+  instead of the Supabase MCP connector. The new account's existing project `agentic2026` is used.
+  A dedicated cloud environment `agentic2026` (limited network) holds this project's secrets.
+- 19:40 P1 done: 15,843 items loaded; `id_doc` + `prefixes` added (9,109 records with an ownership
+  prefix); both datasets fingerprinted (PDF sha256 + Merkle root).

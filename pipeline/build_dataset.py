@@ -1,7 +1,8 @@
 """Merge yearly records, repair words glued at line wraps, derive search fields and stats."""
 import json, re, collections, sys
 
-recs = [json.loads(l) for y in (2025, 2026) for l in open(f"data/processed/items_{y}.jsonl")]
+import os
+recs = [json.loads(l) for y in (2025, 2026) for l in open(f"data/processed/items_{y}.jsonl")] if os.path.exists("data/processed/items_2026.jsonl") else []
 TOK = re.compile(r"[A-Z0-9À-Ü']+")
 freq = collections.Counter(t for r in recs for it in r["items"] for t in TOK.findall(it))
 
@@ -36,14 +37,40 @@ def categorize(obj):
         if any(k in obj for k in kws): return cat
     return "altro"
 
-out, stats = [], collections.Counter()
-for r in recs:
-    items = [fix(i) for i in r["items"]]
-    cats = sorted({categorize(i) for i in items})
-    foreign = any(re.search(r"\bESTER[AO]\b", i) for i in items)
-    out.append({"id": r["id"], "n": r["number"], "year": r["year"], "date": r["date"], "page": r["page"],
-                "objects": items, "categories": cats, "foreign": foreign})
-    for c in cats: stats[c] += 1
-json.dump(out, open("data/processed/catalogue.json", "w"), ensure_ascii=False, separators=(",", ":"))
-print(len(out), dict(stats))
-print([o["objects"] for o in out[100:104]])
+ITA_DOC = re.compile(r"^(CARTA IDENTITA'|CARTA D'IDENTITA'|PATENTE DI GUIDA|TESSERA SANITARIA|CODICE FISCALE|PERMESSO DI SOGGIORNO|PASSAPORTO)(?!.*ESTER)")
+FOR_DOC = re.compile(r"(PASSAPORTO ESTERO|CARTA IDENTITA' ESTERA|PATENTE DI GUIDA ESTERA|TESSERA SANITARIA ESTERA|DOCUMENTO DI IDENTITA' ESTER)")
+PREFIX = re.compile(r"(?:\bNr|\bIMEI)\s*:\s*([A-Z0-9][A-Z0-9 ./\-]*?)\s*\*")
+
+
+def norm_prefix(p: str) -> str:
+    return re.sub(r"[^A-Z0-9]", "", p.upper())
+
+
+def id_doc_kind(objects):
+    ita = any(ITA_DOC.search(o) for o in objects)
+    fore = any(FOR_DOC.search(o) for o in objects)
+    return "mixed" if ita and fore else "italian" if ita else "foreign" if fore else "none"
+
+
+def prefixes(objects):
+    out = []
+    for o in objects:
+        for m in PREFIX.finditer(o):
+            p = norm_prefix(m.group(1))
+            if len(p) >= 3 and p not in out:
+                out.append(p)
+    return out
+
+
+if __name__ == "__main__":
+    out, stats = [], collections.Counter()
+    for r in recs:
+        items = [fix(i) for i in r["items"]]
+        cats = sorted({categorize(i) for i in items})
+        out.append({"id": r["id"], "n": r["number"], "year": r["year"], "date": r["date"], "page": r["page"],
+                    "objects": items, "categories": cats, "id_doc": id_doc_kind(items), "prefixes": prefixes(items)})
+        for c in cats: stats[c] += 1
+        stats["id_doc:" + out[-1]["id_doc"]] += 1
+        stats["with_prefix"] += bool(out[-1]["prefixes"])
+    json.dump(out, open("data/processed/catalogue.json", "w"), ensure_ascii=False, separators=(",", ":"))
+    print(len(out), dict(stats))
