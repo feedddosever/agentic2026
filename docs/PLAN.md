@@ -120,6 +120,9 @@ Choices and why:
 | `POST /alerts/match` | intake, importer | `{item_ids}` → matches → callback (call or demo notification) |
 | `POST /webhooks/elevenlabs` | ElevenLabs | post-call data → `calls` |
 | `GET  /verify/:message_id` | citizens | proves an outbox message came from the registered Ritrovo agent |
+| `GET  /queue` · `GET /outbox` · `GET /alerts` | operator console | recent items with routing decision · outbox messages · alerts with masked contacts |
+| `GET  /items/:id/custody` · `POST /items/:id/return` | console | custody timeline with explorer links · mark returned (custody event) |
+| `GET  /datasets` | about page | official-list fingerprints with anchor tx |
 
 ## 7. Phases, tasks and acceptance criteria
 
@@ -178,7 +181,7 @@ Choices and why:
 - **Accept:** registering an alert, then doing an intake that matches it, produces a callback within a minute.
 
 ### P8 Lovable front end (from 21:00, builder drives, in parallel)
-- [ ] `lovable/PROMPTS.md`: ordered prompts, one screen per prompt, with the API contract and Supabase keys to use.
+- [x] `lovable/PROMPTS.md`: ordered prompts, one screen per prompt, with the API contract and Supabase keys to use.
 - [ ] Citizen app: search in any language, item page with ownership check, pickup pack, alert sign-up, voice widget, `verify message` page.
 - [ ] Operator console: intake (camera + dictation), return queue/outbox, embassy batches, custody timeline with explorer links.
 - **Accept:** both apps live on a public URL and working against the real backend.
@@ -248,3 +251,5 @@ Choices and why:
   function. The builder enters each key once, in the Supabase dashboard.
 - 20:05 Order change while keys are pending: P6 (contract, no key needed) and P8 prompts move ahead of
   P3/P4/P5; those start as soon as the keys are in.
+- 20:25 P8 prompts written (8 prompts); operator routes added to the API contract (section 6) so the
+  front end and P5–P7 build against the same spec. Agent/deploy wallet generated (address in `.env`, testnet only).
