@@ -1,0 +1,410 @@
+{
+ "01e24194508d": {
+  "bold": true,
+  "c": "U"
+ },
+ "028b99b01570": {
+  "bold": false,
+  "c": "T"
+ },
+ "03a06196c9ee": {
+  "bold": true,
+  "c": "N"
+ },
+ "0516e56b8a2f": {
+  "bold": false,
+  "c": "v"
+ },
+ "06014be81a3c": {
+  "bold": true,
+  "c": "D"
+ },
+ "0799f60696bd": {
+  "bold": false,
+  "c": "2"
+ },
+ "07af328bcb96": {
+  "bold": false,
+  "c": "("
+ },
+ "0aa29cef34de": {
+  "bold": true,
+  "c": "A"
+ },
+ "109a1bf7a18e": {
+  "bold": false,
+  "c": "P"
+ },
+ "1278b3ec905a": {
+  "bold": false,
+  "c": "9"
+ },
+ "163c4897970f": {
+  "bold": false,
+  "c": "5"
+ },
+ "186f9e0330a2": {
+  "bold": false,
+  "c": "8"
+ },
+ "18dc300e00fe": {
+  "bold": false,
+  "c": "e"
+ },
+ "197adb5fea39": {
+  "bold": false,
+  "c": "*"
+ },
+ "1d403a07373e": {
+  "bold": false,
+  "c": "Z"
+ },
+ "1d8ff01f7982": {
+  "bold": true,
+  "c": "Q"
+ },
+ "1fa1498118ac": {
+  "bold": true,
+  "c": "3"
+ },
+ "20045d5a6e95": {
+  "bold": false,
+  "c": "1"
+ },
+ "207c69b61c47": {
+  "bold": false,
+  "c": "'"
+ },
+ "217800f72e86": {
+  "bold": false,
+  "c": "J"
+ },
+ "220cca5b898f": {
+  "bold": false,
+  "c": "+"
+ },
+ "2317a61d02a9": {
+  "bold": false,
+  "c": "V"
+ },
+ "2659c93c6674": {
+  "bold": false,
+  "c": "F"
+ },
+ "2b5abc92943b": {
+  "bold": false,
+  "c": "U"
+ },
+ "316a1fc575b7": {
+  "bold": false,
+  "c": "W"
+ },
+ "339d2b140580": {
+  "bold": true,
+  "c": "Z"
+ },
+ "342307fb89ac": {
+  "bold": false,
+  "c": "-"
+ },
+ "361cc7e4ba04": {
+  "bold": false,
+  "c": "h"
+ },
+ "3650c1dad5d5": {
+  "bold": true,
+  "c": "S"
+ },
+ "39ccb9c432b1": {
+  "bold": false,
+  "c": "Q"
+ },
+ "3a2cd39458af": {
+  "bold": false,
+  "c": "&"
+ },
+ "3c0ce5819dd4": {
+  "bold": false,
+  "c": "B"
+ },
+ "3e86f4ce5f49": {
+  "bold": false,
+  "c": "R"
+ },
+ "3ea7fcd4eef0": {
+  "bold": true,
+  "c": "V"
+ },
+ "3f289fe2eee2": {
+  "bold": false,
+  "c": "n"
+ },
+ "3f826c29e089": {
+  "bold": false,
+  "c": "z"
+ },
+ "41305a75a543": {
+  "bold": false,
+  "c": "t"
+ },
+ "4d20788c9002": {
+  "bold": false,
+  "c": "y"
+ },
+ "54d0eb6b1259": {
+  "bold": false,
+  "c": "E"
+ },
+ "57fb9c6b0989": {
+  "bold": true,
+  "c": "1"
+ },
+ "58eae3f108ca": {
+  "bold": true,
+  "c": "5"
+ },
+ "59b6ed0fe945": {
+  "bold": true,
+  "c": "2"
+ },
+ "5a6f87960bbe": {
+  "bold": false,
+  "c": "x"
+ },
+ "5d2669a56320": {
+  "bold": false,
+  "c": "C"
+ },
+ "633281aeacc4": {
+  "bold": false,
+  "c": "\""
+ },
+ "633b0be4e0cd": {
+  "bold": true,
+  "c": "C"
+ },
+ "6740dcd6a1e9": {
+  "bold": false,
+  "c": "/"
+ },
+ "6ad15cd26b77": {
+  "bold": false,
+  "c": "3"
+ },
+ "6fb2b6cb43bc": {
+  "bold": false,
+  "c": "O"
+ },
+ "70c5812a8e60": {
+  "bold": true,
+  "c": "0"
+ },
+ "719659db14b8": {
+  "bold": false,
+  "c": "L"
+ },
+ "755b9540e2c3": {
+  "bold": false,
+  "c": "a"
+ },
+ "793ef94259f4": {
+  "bold": false,
+  "c": "o"
+ },
+ "7fba5136af36": {
+  "bold": false,
+  "c": "M"
+ },
+ "80a4f119556f": {
+  "bold": false,
+  "c": "b"
+ },
+ "844d2a56806a": {
+  "bold": false,
+  "c": "H"
+ },
+ "88370d7d24b2": {
+  "bold": false,
+  "c": "G"
+ },
+ "8ec5d45a3274": {
+  "bold": false,
+  "c": "Â"
+ },
+ "8fd82979ce47": {
+  "bold": false,
+  "c": ")"
+ },
+ "9200657f3930": {
+  "bold": false,
+  "c": "S"
+ },
+ "94828e7f2a70": {
+  "bold": true,
+  "c": "L"
+ },
+ "9676b80bd8b4": {
+  "bold": true,
+  "c": "P"
+ },
+ "96770344958e": {
+  "bold": false,
+  "c": "Ã"
+ },
+ "971b18f75c98": {
+  "bold": false,
+  "c": "K"
+ },
+ "9795b9b0c462": {
+  "bold": true,
+  "c": "O"
+ },
+ "9ad45d2cd568": {
+  "bold": false,
+  "c": "d"
+ },
+ "a0b7287f48ec": {
+  "bold": false,
+  "c": "."
+ },
+ "a1a0916d48bc": {
+  "bold": false,
+  "c": "u"
+ },
+ "a25ce0a3b94e": {
+  "bold": false,
+  "c": "k"
+ },
+ "a28f6c983af1": {
+  "bold": true,
+  "c": "G"
+ },
+ "a2cd648418ed": {
+  "bold": false,
+  "c": ","
+ },
+ "a5106adca1aa": {
+  "bold": true,
+  "c": "T"
+ },
+ "a82a7c46b846": {
+  "bold": true,
+  "c": "R"
+ },
+ "a8d4f5f76e2a": {
+  "bold": false,
+  "c": "g"
+ },
+ "ac2a6d991e06": {
+  "bold": false,
+  "c": "c"
+ },
+ "b7d35ff6e56d": {
+  "bold": false,
+  "c": "X"
+ },
+ "b9735a9b54e4": {
+  "bold": false,
+  "c": "m"
+ },
+ "bfe3c5a27682": {
+  "bold": false,
+  "c": "N"
+ },
+ "c2e33e6ac4e5": {
+  "bold": true,
+  "c": "E"
+ },
+ "c3ba6db1d71f": {
+  "bold": false,
+  "c": "f"
+ },
+ "c6bc3f98927a": {
+  "bold": false,
+  "c": " "
+ },
+ "c76bace5a561": {
+  "bold": false,
+  "c": "D"
+ },
+ "cbe2807446b0": {
+  "bold": false,
+  "c": "@"
+ },
+ "cc30423b41b4": {
+  "bold": false,
+  "c": "¬"
+ },
+ "cfe1a7e3b1ae": {
+  "bold": false,
+  "c": "!"
+ },
+ "d0f1f70d431b": {
+  "bold": false,
+  "c": "l"
+ },
+ "d3561da54363": {
+  "bold": false,
+  "c": "I"
+ },
+ "d3c0d803e671": {
+  "bold": false,
+  "c": "r"
+ },
+ "d562549902d2": {
+  "bold": false,
+  "c": "i"
+ },
+ "d611ed3f1501": {
+  "bold": true,
+  "c": "I"
+ },
+ "d679cb1ff0c7": {
+  "bold": false,
+  "c": "A"
+ },
+ "d6b6e452073a": {
+  "bold": false,
+  "c": "7"
+ },
+ "d89e8114b522": {
+  "bold": false,
+  "c": "6"
+ },
+ "db0e12a5d80b": {
+  "bold": false,
+  "c": "p"
+ },
+ "e14735d700a7": {
+  "bold": false,
+  "c": ":"
+ },
+ "e754851deb9a": {
+  "bold": false,
+  "c": "0"
+ },
+ "e7c849f3fbb0": {
+  "bold": false,
+  "c": "s"
+ },
+ "e8544d1c4996": {
+  "bold": true,
+  "c": "/"
+ },
+ "e85e04218a87": {
+  "bold": false,
+  "c": "4"
+ },
+ "e9a46a32df3e": {
+  "bold": true,
+  "c": "6"
+ },
+ "ea4bb3cd18c0": {
+  "bold": false,
+  "c": "Y"
+ },
+ "f60c92b8d60a": {
+  "bold": false,
+  "c": "°"
+ }
+}

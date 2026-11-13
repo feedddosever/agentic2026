@@ -1,0 +1,9 @@
+node_modules/
+.env*
+!.env.example
+data/processed/lines_*.jsonl
+__pycache__/
+.next/
+.vercel/
+contracts/out/
+contracts/cache/
