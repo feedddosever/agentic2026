@@ -19,4 +19,6 @@
   search with structured output for consulates and other offices), Avalanche (CustodyLog contract, ERC-8004
   identity, EIP-191 signatures), Lovable (front end), Supabase (Postgres + Edge Functions), GitHub Actions
   (daily list import), PyMuPDF (font-level PDF decoding).
-- **Deploy su Avalanche:** _(CustodyLog address on Fuji/C-Chain + ERC-8004 agentId, from contracts/deployments/)_
+- **Deploy su Avalanche:** Fuji testnet – CustodyLog `0xa5aAb3b1743922ED1eabaB6C2647787B92807B48` (deploy tx
+  `0x6a7040f7fdc99cc08b6a806c5e3a32d1de9791384c11576fa8d9b3e1f9ab743f`); ERC-8004 agentId 302 in registry
+  `0x8004A818BFB912233c491871b3d84c89A494BD9e` (tx `0x149f16d2508fafcb679650520dd0a8ba3ac6d951260ccdde2891716bd4c97ce0`)

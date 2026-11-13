@@ -40,6 +40,16 @@ waiting for people to search.**
    each official list (PDF sha256 + Merkle root of decoded records) are logged in `CustodyLog` on Avalanche. The
    agent has an **ERC-8004** identity. Only hashes go onchain.
 
+## Live on Avalanche Fuji
+
+| | |
+|---|---|
+| `CustodyLog` contract | [`0xa5aAb3b1743922ED1eabaB6C2647787B92807B48`](https://testnet.snowtrace.io/address/0xa5aAb3b1743922ED1eabaB6C2647787B92807B48) |
+| Ritrovo agent (ERC-8004) | agentId **302** in the Identity Registry [`0x8004A818…94BD9e`](https://testnet.snowtrace.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e) ([registration tx](https://testnet.snowtrace.io/tx/0x149f16d2508fafcb679650520dd0a8ba3ac6d951260ccdde2891716bd4c97ce0)) |
+| Agent wallet (signs messages, writes custody) | [`0xD81fF9E6685A80C9cA31EE10c9311ebb66A70Fd1`](https://testnet.snowtrace.io/address/0xD81fF9E6685A80C9cA31EE10c9311ebb66A70Fd1) |
+| Official list 2025 anchored | [tx](https://testnet.snowtrace.io/tx/0x3c4b5212397fae6b528083ffaca4fb522542b2843520f52f441d4bf8425cb4fc) (8,903 records, Merkle root `0xbd9a1b35…`) |
+| Official list 2026 anchored | [tx](https://testnet.snowtrace.io/tx/0x168a4a1b2055247d9adffaaca8d219a3aff104c26459bd19327f4c8c4d5a21f2) (6,940 records, Merkle root `0xed0a52e4…`) |
+
 ## Architecture
 
 ```mermaid

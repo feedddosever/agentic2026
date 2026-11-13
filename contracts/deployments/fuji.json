@@ -1,0 +1,14 @@
+{
+  "custodyLog": "0xa5aAb3b1743922ED1eabaB6C2647787B92807B48",
+  "deployTx": "0x6a7040f7fdc99cc08b6a806c5e3a32d1de9791384c11576fa8d9b3e1f9ab743f",
+  "deployBlock": 61019436,
+  "chainId": 43113,
+  "anchors": {
+    "0x5ff9fd71137ca2729e260d1bef75af5745ebb69356abe32f54d700b0a0e9cecd": "0x3c4b5212397fae6b528083ffaca4fb522542b2843520f52f441d4bf8425cb4fc",
+    "0xe29cb948ada8f7900b0f04ae355bb0969430cf5fe373c3f72bc00f436c1bc572": "0x168a4a1b2055247d9adffaaca8d219a3aff104c26459bd19327f4c8c4d5a21f2"
+  },
+  "agentId": "302",
+  "identityRegistry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+  "registerTx": "0x149f16d2508fafcb679650520dd0a8ba3ac6d951260ccdde2891716bd4c97ce0",
+  "bindTx": "0x0b243d3888e8fed6a5f800f350785945de7e85b0314187751fbadce64eceabf9"
+}

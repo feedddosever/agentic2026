@@ -168,10 +168,10 @@ Choices and why:
 
 ### P6 Avalanche (03:30–05:00)  · needs a funded testnet wallet
 - [x] `contracts/CustodyLog.sol` (events: Intake, Routed, Returned, DatasetAnchored; owner-only writes) + tests.
-- [ ] Deploy to Fuji (mainnet only if team1 requires it); verify on the explorer.
-- [ ] Register the Ritrovo agent in the ERC-8004 Identity Registry (agent card JSON hosted with the app).
+- [x] Deploy to Fuji (mainnet only if team1 requires it); verify on the explorer.
+- [x] Register the Ritrovo agent in the ERC-8004 Identity Registry (agent card JSON hosted with the app).
 - [x] `/chain/*` helper in the edge function (viem); `/verify/:message_id` page data.
-- [ ] Anchor both datasets (PDF hash + Merkle root).
+- [x] Anchor both datasets (PDF hash + Merkle root).
 - **Accept:** explorer shows contract, dataset anchors and at least one intake → return lifecycle; the agent id resolves in an ERC-8004 explorer.
 
 ### P7 Sentinel automation (05:00–06:30)
@@ -282,3 +282,7 @@ Choices and why:
   - Full scenario: alert → intake → US Embassy draft (real consular address) + email to alert author + ElevenLabs
     voice note (MP3), all signed. The policy guard did not need to add anything.
   - Embassy refresh is a re-run of `scripts/build-embassies.sh` (not an Exa Monitor): simpler, same result.
+- [12] P6 live on Fuji: CustodyLog 0xa5aAb3b1743922ED1eabaB6C2647787B92807B48, both lists anchored, agent registered as
+  ERC-8004 agentId 302 and bound to the contract; registration file lists the registration back. Full lifecycle
+  (intake → routed → returned) confirmed by receipts (blocks 61019494/508/511). Setup gas cost ≈ 0.0000000002 AVAX.
+  Source verification on Snowtrace not done (optional).
