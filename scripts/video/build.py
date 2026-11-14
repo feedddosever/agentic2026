@@ -89,10 +89,10 @@ run(["-i", raw("raw5b"), "-i", f"{V}/audio/vo_s5.mp3", "-filter_complex",
      "-map", "[v]", "-map", "[aout]", "-t", str(D5), *ENC, f"{O}/s5.mp4"])
 
 # Scene 6: the alert page, then the closing card; fade out.
-D6 = 15.2; t6 = 5.32
+D6 = 14.0; t6 = 5.32  # ends ~0.3 s after the last word
 run(["-i", raw("raw6"), "-loop", "1", "-i", f"{V}/slides/s6b.png", "-i", f"{V}/audio/vo_s6.mp3", "-filter_complex",
      f"{seg(0, t6, t6 + 7.6)}[a];[1:v]{still(0, 8.3, 0.025)}[b];[a][b]xfade=transition=fade:duration=0.4:offset=7.2,"
-     f"fade=t=out:st={D6 - 0.8}:d=0.8[v];{narration(2, 'vo_s6', 0.4, D6)},afade=t=out:st={D6 - 0.8}:d=0.8[aout]",
+     f"fade=t=out:st={D6 - 0.45}:d=0.45[v];{narration(2, 'vo_s6', 0.4, D6)},afade=t=out:st={D6 - 0.25}:d=0.25[aout]",
      "-map", "[v]", "-map", "[aout]", "-t", str(D6), *ENC, f"{O}/s6.mp4"])
 
 # Join and normalise loudness.
