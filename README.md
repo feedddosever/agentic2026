@@ -30,8 +30,9 @@ waiting for people to search.**
    (contacts found and kept fresh with **Exa**), anything else → matched against citizens' alerts. A deterministic
    policy guard makes sure every legally required notification exists, whatever the model did.
 4. **A 24/7 multilingual voice line (ElevenLabs).** Callers describe what they lost in their own language; the
-   agent searches the catalogue, confirms ownership with the first characters of the document number or IMEI
-   (already public in the official list), states the fees and sends a pickup pack with a pre-filled delega.
+   agent finds the item from the first characters of the document number or IMEI (public in the official list),
+   proves ownership with the last four (never published; Ritrovo keeps only a salted hash from intake), states
+   the fees and sends a pickup pack with a pre-filled delega.
 5. **Sentinel alerts.** No match yet? Leave an alert. When a new intake or a new official list contains the item,
    Ritrovo notifies the owner: an outbound call if a phone line is connected, otherwise a voice note in their
    language.

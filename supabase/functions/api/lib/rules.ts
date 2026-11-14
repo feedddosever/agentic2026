@@ -65,6 +65,17 @@ const ID_LIKE = /\b(?=(?:[A-Z]*\d){3})[A-Z0-9]{6,24}\b/gi;
 const PROTECT = /https?:\/\/\S+|\bIN-\d{6}-[A-Z0-9]{4}\b|\{VERIFY_URL\}/gi;
 
 /** Mask every identifier-like token in free text (operator notes, model output, message bodies). */
+/** Full ID-like numbers in a raw note. Used only to derive salted ownership checks; never stored or logged. */
+export function idTokens(s: string): string[] {
+  return [...s.replace(PROTECT, " ").matchAll(ID_LIKE)].map((m) => m[0].toUpperCase());
+}
+
+/** The secret part of a number: its last four characters, when they don't overlap the published first five. */
+export function secretSuffix(token: string): string | null {
+  const clean = token.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return clean.length >= 9 ? clean.slice(-4) : null;
+}
+
 export function maskIds(s: string): string {
   const kept: string[] = [];
   const shielded = s.replace(PROTECT, (m) => { kept.push(m); return `\u0000${kept.length - 1}\u0000`; });

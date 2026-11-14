@@ -6,7 +6,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.49.4";
 import { OFFICE, computeFees, claimHorizon, documentsToBring, romeDate } from "./lib/office.ts";
 import { fillDelega } from "./lib/delega.ts";
-import { intake, previewIntake, route, markReturned, flushCustody, alertMatches, scanAlerts, outboxPayload, maskContact, type Ctx } from "./lib/engine.ts";
+import { intake, previewIntake, route, secretHash, markReturned, flushCustody, alertMatches, scanAlerts, outboxPayload, maskContact, type Ctx } from "./lib/engine.ts";
 import { chainInfo, explorerTx, recoverSigner, hashJson, agentBalance, agentAddress, anchorDataset, AGENT_ID, IDENTITY_REGISTRY } from "./lib/chain.ts";
 import { exaEnabled, otherOffices, findMission } from "./lib/exa.ts";
 import { llmEnabled, MODEL } from "./lib/llm.ts";
@@ -103,12 +103,40 @@ async function toolSearch(b: Record<string, unknown>) {
 }
 
 async function toolVerify(b: Record<string, unknown>) {
-  const id = String(b.item_id ?? ""), said = String(b.prefix ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  if (!id || said.length < 4) return bad("item_id and a prefix of at least 4 characters are required");
+  const id = String(b.item_id ?? "");
+  const said = String(b.prefix ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const last4 = String(b.last4 ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!id || (said.length < 4 && last4.length !== 4)) return bad("item_id and a prefix (4+ characters) or last4 (4 characters) are required");
   const item = await getItem(id);
   if (!item) return bad("unknown item", 404);
-  const hit = (item.prefixes ?? []).find((p) => p.length >= 4 && (said.startsWith(p) || p.startsWith(said)));
-  return json({ item_id: id, match: !!hit, note: hit ? "The number matches the published record." : "Does not match this record." });
+  // The first characters are public in the official list: a matching hint, not proof.
+  const hit = said.length >= 4 ? (item.prefixes ?? []).find((p) => p.length >= 4 && (said.startsWith(p) || p.startsWith(said))) : undefined;
+  const { data: secrets } = await db.from("item_secrets").select("suffix_hash").eq("item_id", id);
+  const available = (secrets ?? []).length > 0;
+  let ownership: "verified" | "failed" | "locked" | "not_checked" | "not_available" = available ? "not_checked" : "not_available";
+  if (available && last4.length === 4) {
+    const since = new Date(Date.now() - 3600_000).toISOString();
+    const { count } = await db.from("verify_attempts").select("id", { count: "exact", head: true }).eq("item_id", id).eq("ok", false).gte("created_at", since);
+    if ((count ?? 0) >= 5) ownership = "locked";
+    else {
+      const h = await secretHash(id, last4);
+      const ok = (secrets ?? []).some((s) => s.suffix_hash === h);
+      await db.from("verify_attempts").insert({ item_id: id, ok });
+      ownership = ok ? "verified" : "failed";
+    }
+  }
+  const note = {
+    verified: "Ownership confirmed: the last four characters match what the office read from the document. The owner still shows an ID at the counter.",
+    failed: "The last four characters do not match. Do not confirm ownership; suggest checking the number, or visiting the office.",
+    locked: "Too many wrong attempts for this item. Ownership can now only be confirmed at the office.",
+    not_checked: hit
+      ? "The first characters match, but they are public in the official list, so this is only a hint. Ask for the LAST four characters of the same number and call verify_ownership again with last4."
+      : "The first characters do not match this record.",
+    not_available: hit
+      ? "The first characters match the published record. This record comes from the official list, so the office checks the full number against the owner's ID at the counter."
+      : "The first characters do not match this record.",
+  }[ownership];
+  return json({ item_id: id, match: !!hit, ownership, last4_check_available: available, note });
 }
 
 async function toolFees(b: Record<string, unknown>) {

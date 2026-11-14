@@ -86,3 +86,10 @@ Deno.test("dates follow Rome time, not UTC", () => {
   assertEquals(romeDate(new Date("2026-11-13T22:59:00Z")), "2026-11-13");
   assertEquals(romeDate(new Date("2026-07-01T22:00:00Z")), "2026-07-02");
 });
+
+import { idTokens, secretSuffix } from "./rules.ts";
+Deno.test("ownership secrets come from the unpublished last four characters only", () => {
+  assertEquals(idTokens("Passaporto ZR4827316, IMEI 356789104455667, record IN-261113-342D, bus 64"), ["ZR4827316", "356789104455667"]);
+  assertEquals(secretSuffix("ZR4827316"), "7316");
+  assertEquals(secretSuffix("AB1234"), null, "short numbers would overlap the published prefix");
+});

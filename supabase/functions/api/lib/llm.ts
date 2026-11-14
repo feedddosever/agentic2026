@@ -82,7 +82,7 @@ export type ToolSpec = {
 export type Step = { tool: string; input: unknown; output: unknown; ms: number };
 
 /** Manual agentic loop (strict tools, server-side refusal fallback). Returns the final text and the tool trace. */
-export async function runToolLoop(opts: { system: string; user: string; tools: ToolSpec[]; maxTurns?: number }): Promise<{ text: string; steps: Step[]; model: string } | null> {
+export async function runToolLoop(opts: { system: string; user: string; tools: ToolSpec[]; maxTurns?: number; stopAfter?: string }): Promise<{ text: string; steps: Step[]; model: string } | null> {
   if (!client) return null;
   const tools: Anthropic.Beta.BetaTool[] = opts.tools.map((t) => ({
     name: t.name, description: t.description, input_schema: t.input_schema as Anthropic.Beta.BetaTool.InputSchema, strict: true,
@@ -120,6 +120,8 @@ export async function runToolLoop(opts: { system: string; user: string; tools: T
         results.push({ type: "tool_result", tool_use_id: u.id, content: msg, is_error: true });
       }
     }
+    // The agent's work is done once its closing tool has run: skip the extra model turn.
+    if (opts.stopAfter && uses.some((u) => u.name === opts.stopAfter)) return { text: "", steps, model };
     messages.push({ role: "user", content: results });
   }
   return { text: "(stopped: turn limit)", steps, model };

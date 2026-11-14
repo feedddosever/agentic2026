@@ -311,3 +311,22 @@ Three small fixes in Ritrovo:
 3. Operator intake: after "Confirm and save" succeeds, clear the Note textarea and the photo (the raw note may
    contain full document numbers; the saved record is already masked). Keep the result panel visible.
 ```
+
+## Prompt 12: real ownership check on the item page
+
+```
+On the item page, the "Is it yours?" card calls POST {API}/tools/verify. Its response now also has
+"ownership" ("not_checked" | "verified" | "failed" | "locked" | "not_available"), "last4_check_available" (boolean)
+and "note" (one sentence, show it under the result). Update the card:
+1. First step stays the same: "First characters of the number on your document or phone" + Check, sending
+   { item_id, prefix }.
+2. If the response has match = true and last4_check_available = true, show a second field "Last 4 characters of
+   the same number" (maxLength 4, uppercase, letters and digits) with a Confirm button that sends
+   { item_id, prefix, last4 }. Explain in small text: "The first characters are public in the official list; the
+   last four are not, so they prove it's yours."
+3. Result states: verified → green box "It's yours. Bring an ID and quote {item id}" with a button to the pickup
+   pack; failed → amber "That doesn't match. Check the number, or ask at the office."; locked → grey "Too many
+   attempts. Ownership can now only be checked at the office."; not_available with match → neutral "The first
+   characters match. The office checks the full number against your ID at the counter."; match = false → as now.
+Never store or log the characters the user types.
+```

@@ -305,3 +305,10 @@ Choices and why:
   recording after midnight a bug showed up: the server's "today" was UTC, so between 00:00 and 01:00/02:00 Rome time
   the search window ended a day early and new intakes got the previous day's date and id. Fixed with romeDate()
   (Europe/Rome) and a test (11 rule tests).
+- [16] Judge-readiness pass (Sat morning). (a) The ownership check compared the caller's prefix with the prefix
+  already public in the list, so it proved nothing. Now: salted hash of the last four characters stored at intake
+  (migration 0006, service-role-only tables), verify takes last4, 5 wrong tries an hour per item; voice agent tool
+  and prompt updated; Lovable prompt 12 for the item page. (b) Routing was ~31 s, too slow for a 3-minute live
+  demo: context prefetch (consulate + alert matches), one-turn drafting with early stop after finish, txs sent
+  without waiting for receipts (nonce manager). Now ~12 s; all txs confirmed on Fuji. 12 rule tests, 20 smoke
+  checks and the 11-step browser test pass. DEMO.md rewritten as a timed 3-minute run sheet with Q&A.

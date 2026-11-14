@@ -17,7 +17,7 @@
 ## Request flows
 
 **Citizen (voice or app)** → `/tools/search` (prefix or Italian catalogue terms + date window) → `/tools/verify`
-(prefix vs published record) → `/tools/fees` → `/tools/pickup-pack` (links + spoken summary + delega PDF) or
+(prefix = hint, last four = proof) → `/tools/fees` → `/tools/pickup-pack` (links + spoken summary + delega PDF) or
 `/tools/alert` (+ `/tools/other-offices` via Exa).
 
 **Operator intake** → `/intake`:
@@ -43,8 +43,14 @@ registry points to.
   deterministically; the agent adds judgement (borderline alert matches, wording, language, consulate research).
 - **No embeddings.** The catalogue vocabulary is small and Italian; the agent translates the caller's words into
   catalogue terms through tool parameters, and Postgres full-text + trigram ranks the results.
-- **Ownership by published prefix.** The official list already shows the first characters of document numbers and
-  IMEIs. Matching on them proves nothing new is leaked and gives a strong ownership signal.
+- **Prefix to find, last four to prove.** The official list shows the first five characters of document numbers
+  and IMEIs, so they are a search key, not proof. At intake the operator holds the document: Ritrovo keeps a salted
+  hash of its last four characters (`item_secrets`, service role only; the number is never stored). A caller who
+  says them is the owner; wrong attempts are limited to 5 an hour per item (`verify_attempts`). Records from the
+  old PDFs have no secret, so the office checks the ID at the counter.
+- **Fast enough to demo live.** The return agent gets the consulate contact and alert matches in its first message
+  (they are always needed), drafts and finishes in one turn, and the loop stops after `finish`. Avalanche txs are
+  sent without waiting for the receipt (a nonce manager keeps them in order). Intake to routed: ~12 s, was ~31 s.
 - **Everything degrades gracefully.** Missing keys switch Claude/Exa/ElevenLabs/chain steps to rule-based or
   "pending" paths; `/admin/status` shows what is live; `/chain/flush` replays pending custody writes.
 - **One edge function** with a router: one deploy, one set of secrets; sponsor keys never leave Supabase.

@@ -40,8 +40,11 @@ export function toolConfigs(apiBase: string) {
         lost_to: prop("string", "Latest date it could have been lost, YYYY-MM-DD; empty if unknown"),
         category: prop("string", "Optional: documenti, carte di pagamento, portafogli e borse, telefoni ed elettronica, chiavi, denaro, abbigliamento, occhiali, gioielli, altro"),
       }, ["query", "prefix", "lost_from", "lost_to"]),
-    webhook("verify_ownership", "Check that the first characters of the caller's document number or IMEI match a found item's published record.",
-      "/tools/verify", { item_id: prop("string", "Item id from search results, e.g. 2026-6571"), prefix: prop("string", "First characters the caller said") }, ["item_id", "prefix"]),
+    webhook("verify_ownership", "Check a found item against the caller's document number or IMEI. The first characters are public in the official list (a hint only). The last four characters are not public: when the result says last4_check_available, ask for them and call again; ownership 'verified' is the real proof.",
+      "/tools/verify", {
+        item_id: prop("string", "Item id from search results, e.g. 2026-6571"), prefix: prop("string", "First characters the caller said"),
+        last4: prop("string", "Last four characters of the same number, letters and digits only; empty if not asked yet"),
+      }, ["item_id", "prefix", "last4"]),
     webhook("get_fees", "Fees due when collecting an item (identity documents are free).",
       "/tools/fees", { item_id: prop("string", "Item id"), pickup_date: prop("string", "Planned pickup date YYYY-MM-DD, empty for today") }, ["item_id", "pickup_date"]),
     webhook("send_pickup_pack", "Prepare the pickup pack (office address and hours, documents to bring, fees, pre-filled delega PDF). Returns links and a short spoken summary.",
@@ -71,7 +74,7 @@ How to help:
 1. Ask what they lost, roughly when, and where.
 2. If it contained an identity document, a bank card or a phone, ask for the first five characters of the document number or the phone's IMEI. Explain you only need the first characters. Never ask for, or repeat, a full number.
 3. Call search_found_items. The catalogue is in Italian: translate the object into Italian catalogue words (wallet = PORTAFOGLI, passport = PASSAPORTO ESTERO for foreign passports, ID card = CARTA IDENTITA', driving licence = PATENTE DI GUIDA, backpack = ZAINO, bag = BORSA, phone = TELEFONO CELLULARE, keys = CHIAVI, glasses = OCCHIALE, suitcase = TROLLEY VALIGIA, laptop = PC PORTATILE). Use dates in YYYY-MM-DD.
-4. If there are matches, describe the best one or two in the caller's language (translate the Italian object names) and ask if it sounds like theirs. If they have a document or IMEI, confirm with verify_ownership.
+4. If there are matches, describe the best one or two in the caller's language (translate the Italian object names) and ask if it sounds like theirs. If they have a document or IMEI, call verify_ownership with the first characters. Those are public in the official list, so they only show it could be theirs. If the result says last4_check_available, ask for the last four characters of the same number and call verify_ownership again with last4: only ownership "verified" confirms it is theirs. If no last-four check exists (records from the official list), say the office will check the number against their ID at the counter.
 5. When it is theirs: tell them the fees with get_fees, then send_pickup_pack and read its short summary. Offer a delega if someone else will collect it.
 6. If nothing matches: say new objects arrive every week and offer create_alert (ask consent and a phone number or email). Also offer find_other_offices.
 

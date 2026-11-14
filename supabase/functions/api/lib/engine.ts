@@ -1,7 +1,7 @@
 // Return engine: intake → understand → custody → route (agent + policy guard) → signed outbox → alerts.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2.49.4";
 import { understandIntake, runToolLoop, llmEnabled, MODEL, type ToolSpec, type Step } from "./llm.ts";
-import { parseNote, maskNumber, maskIds, requiredChannels, templateAppIo, templateEmbassy, templateAlertMatch, type ItemForRouting } from "./rules.ts";
+import { parseNote, maskNumber, maskIds, idTokens, secretSuffix, requiredChannels, templateAppIo, templateEmbassy, templateAlertMatch, type ItemForRouting } from "./rules.ts";
 import { countryByCode } from "./countries.ts";
 import { exaEnabled, findMission } from "./exa.ts";
 import { signPayload, writeCustody, hashJson, explorerTx, type CustodyEvent } from "./chain.ts";
@@ -51,6 +51,12 @@ async function sha256Hex(bytes: Uint8Array) {
 const b64ToBytes = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 
 // ---------- custody ----------
+const ITEM_SALT = Deno.env.get("ITEM_SALT") ?? "";
+/** Salted hash of the last four characters of an item's document/IMEI number (see migration 0006). */
+export async function secretHash(itemId: string, last4: string) {
+  return await sha256Hex(new TextEncoder().encode(`${ITEM_SALT}|${itemId}|${last4.toUpperCase()}`));
+}
+
 export async function custody(ctx: Ctx, event: CustodyEvent, itemId: string, evidence: `0x${string}`, channel?: string) {
   const { tx_hash, error } = await writeCustody(event, itemId, evidence, channel);
   const chain_id = Number(Deno.env.get("CHAIN_ID") ?? "43113");
@@ -174,9 +180,17 @@ export async function intake(ctx: Ctx, input: IntakeInput) {
   };
   const { error } = await ctx.db.from("items").insert(row);
   if (error) throw new Error(error.message);
+  // Ownership secrets: the public list shows only the first five characters, so we keep a salted hash of the last
+  // four of each number the operator read from the document. The numbers themselves are never stored.
+  if (ITEM_SALT) {
+    const secrets = (await Promise.all([...new Set(idTokens(rawNote))].map(async (t) => {
+      const last4 = secretSuffix(t);
+      return last4 ? { item_id: id, prefix: t.slice(0, 5), suffix_hash: await secretHash(id, last4) } : null;
+    }))).filter(Boolean);
+    if (secrets.length) await ctx.db.from("item_secrets").insert(secrets);
+  }
   await ctx.db.from("agent_runs").insert({ item_id: id, kind: "intake", mode, model, steps, result: f, error: llmError });
-  const custodyRes = await custody(ctx, "intake", id, evidence);
-  const routing = await route(ctx, id);
+  const [custodyRes, routing] = await Promise.all([custody(ctx, "intake", id, evidence), route(ctx, id)]);
   return {
     item: { id, objects, colour: row.colour, brand: row.brand, nationality, id_doc: row.id_doc, categories: row.categories, description_en: f.description_en },
     understanding: { mode, model, error: llmError },
@@ -227,7 +241,7 @@ Policy (the office's rules, already decided):
 - Never include full document or card numbers (keep the masked form "XXXXX* * * *"), never ask for payments or bank details, never invent contacts. Identity documents are returned free; embassies are exempt from custody fees.
 - Every message must contain the placeholder {VERIFY_URL} (replaced with a signed verification link) and the pickup link you are given.
 - Keep messages short and clear. Write alert notifications in the alert's language.
-Work efficiently: call independent tools in parallel in the same turn (e.g. lookup_embassy and find_alert_matches together), and draft all messages and call finish in one turn when you can. The item is given to you; call get_item only if you need it again.
+Work efficiently: the item, the consulate contact the policy needs and the alert matches are already looked up and given to you, so normally you draft all messages and call finish together in your first turn. Use the tools only for what is missing (e.g. research_embassy when no contact is cached).
 When done, call finish with the main decision and a one-sentence reason for the operator.`;
 
 export async function route(ctx: Ctx, itemId: string) {
@@ -284,13 +298,22 @@ export async function route(ctx: Ctx, itemId: string) {
       },
     ];
     try {
+      // Context engineering: look up what the policy will certainly need before the first model turn.
+      const embassyCode = required.find((r) => r.channel === "embassy")?.country_code;
+      const t0 = Date.now();
+      const [embassy, matches] = await Promise.all([embassyCode ? lookupEmbassy(embassyCode) : Promise.resolve(undefined), alertMatches(ctx, itemId)]);
+      const pre: Step[] = [];
+      if (embassyCode) pre.push({ tool: "lookup_embassy", input: { country_code: embassyCode }, output: embassy ?? { found: false }, ms: Date.now() - t0 });
+      pre.push({ tool: "find_alert_matches", input: {}, output: matches, ms: Date.now() - t0 });
       const r = await runToolLoop({
         system: ROUTING_SYSTEM,
         user: `Route item ${itemId}: ${JSON.stringify(it)}\nPickup link (Italian): ${pickupIt}\nPickup link (English): ${pickupEn}\n` +
-          `Required by policy: ${JSON.stringify(required)}${hold_reason ? `\nNote: ${hold_reason}` : ""}`,
-        tools, maxTurns: 10,
+          `Required by policy: ${JSON.stringify(required)}${hold_reason ? `\nNote: ${hold_reason}` : ""}\n` +
+          (embassyCode ? `Consulate contact (lookup_embassy ${embassyCode}): ${JSON.stringify(embassy ?? { found: false })}\n` : "") +
+          `Alert matches (find_alert_matches): ${JSON.stringify(matches)}`,
+        tools, maxTurns: 6, stopAfter: "finish",
       });
-      if (r) { mode = "llm"; model = r.model; steps = r.steps; }
+      if (r) { mode = "llm"; model = r.model; steps = [...pre, ...r.steps]; }
     } catch (e) {
       llmError = String((e as Error).message ?? e).slice(0, 300);
     }

@@ -3,34 +3,46 @@
 Judging weights: idea & impact 1/3, technical execution 1/3, demo 1/3. One flow, start to finish, no slides.
 
 ## Setup (before entering the room)
-- `scripts/reset-demo.sh`, then file **one alert** from the citizen app: "black leather wallet with my US passport",
-  lost today at Metro A Termini, prefix `EL655`, your own email.
-- Tabs open: official PDF (comune.roma.it), Ritrovo home, operator console (logged in), voice widget ready,
-  Snowtrace with the CustodyLog contract.
-- Phone on hotspot as Wi-Fi fallback. Physical prop: a black wallet with a printed fake "US passport" page
-  showing number `EL6559123` (fake).
+- `scripts/reset-demo.sh`. Laptop on the venue Wi-Fi, phone hotspot ready, headset with microphone for the call.
+- Tabs open, left to right: official PDF (comune.roma.it), Ritrovo home, operator console (logged in, Intake tab),
+  a second Ritrovo home tab for the call, Snowtrace with the CustodyLog contract.
+- Prop: a black wallet with a printed fake "US passport" page showing number `ZR4827316` (fake). The operator note:
+  "Portafoglio nero in pelle con passaporto americano ZR4827316 e 40 euro. Consegnato da ATAC, metro A Termini."
+- Have the video (docs/VIDEO_SCRIPT_IT.md) open in a background tab as the fallback for the call.
 
-## Script
+## Script (3:00, live)
+Timings measured on the live system: AI proposal ~6 s, confirm + routing + both Avalanche txs ~12 s.
+
 | Time | Show | Say |
 |---|---|---|
-| 0:00 | Official PDF; select text, paste it in a text box → gibberish | "Rome finds about 600 objects a month. This is how it tells you: a 500-page PDF that can't even be searched." |
-| 0:20 | Ritrovo home: stats tiles | "We cracked the font: 102 glyph shapes, 15,843 records, exact. And 48% contain an identity document: the city could give them back." |
-| 0:40 | Operator console: photo of the prop wallet + dictated note → result panel | "At the counter, the operator takes a photo. The agent writes the register entry, masks the passport number, and routes it." |
-| 1:10 | Routing result: embassy draft + alert match; "Show agent trace" | "Foreign passport: the US consulate gets a draft, as the office does by hand today. And a citizen's alert matches the passport prefix: she's notified, with a voice note in her language." |
-| 1:40 | Voice widget, speak English: "I lost my wallet with my passport near Termini today" → prefix → fees → pickup pack | "Or she just calls, at 10 pm, in any language." |
-| 2:20 | Open the notification → Verify page (green) → Snowtrace custody events | "Every message is signed by the agent's ERC-8004 identity: scammers can't fake it. Custody is logged on Avalanche: hashes only, no personal data." |
-| 2:45 | Back to stats | "Ritrovo stops waiting for people to search and starts returning things. Built for the office, open source, live today." |
+| 0:00 | Official PDF: select a row, paste it in the search box → symbols | "Rome logs about 600 found objects a month in a 500-page PDF. Copy the text and you get this. Nobody can search it." |
+| 0:15 | Ritrovo home: stats tiles | "We decoded the font, glyph by glyph: 15,843 records, exact. Half contain an ID document: the owner can be found." |
+| 0:30 | Operator console: paste the note (or dictate) → "Check and edit" | "At the counter the operator dictates a note. Claude proposes the register entry and masks the passport number." |
+| 0:45 | Confirm and save → (12 s) → Routed + Logged | "The operator confirms. The return agent decides who to tell: a US passport, so it drafts a message for the US consulate, with contacts Exa found. A fixed policy checks the agent: required notices always go out. Custody goes on Avalanche." |
+| 1:05 | Second tab, voice widget: "I lost my wallet with my passport this morning near Termini" → first five ZR482 → item on screen → last four 7316 → "it's yours" → pickup pack | "And the owner just calls, any hour, any language. The first characters are public, so the agent asks for the last four, which only the owner and the office know." |
+| 2:05 | Operator → Outbox → consulate message → Verify link (green, agent 302) → Queue → custody timeline | "Every message is signed by Ritrovo's ERC-8004 agent identity on Avalanche, so a consulate can check it and scammers can't fake it. Onchain: only hashes." |
+| 2:40 | Home | "When the city publishes a new list, Ritrovo imports it overnight and alerts people who were looking. Ritrovo stops waiting to be searched, and starts returning. Open source, live today." |
 
 ## Likely questions
-- **Privacy?** Only what the city already publishes; full numbers are masked before storage or AI; contacts
-  behind RLS; chain stores salted hashes.
-- **Is App IO real?** Mocked: the notice is drafted in the outbox. The real integration is App IO's message
-  API keyed by codice fiscale, which the office can derive from the document.
-- **Why blockchain?** Two concrete jobs: anti-scam message verification (anyone can check a message came from
-  the registered agent) and tamper-evident custody of cash and valuables.
-- **What if the AI is wrong?** The policy guard guarantees mandatory notifications; outbox is draft-first; alert
-  notifications need a prefix match or several consistent details.
-- **Cost?** One intake ≈ one vision call + a short tool loop; the voice line runs on ElevenLabs.
+- **The first five characters are public, so how is that proof?** It isn't, and we don't treat it as proof. At
+  intake we keep a salted hash of the last four characters (never the number); the caller must say them, with 5
+  tries an hour. Records from the old PDF only have the prefix, so there the office checks the ID at the counter.
+- **Privacy / GDPR?** Only what the city already publishes; full numbers are masked before storage or AI; contacts
+  behind RLS; the chain stores salted hashes only.
+- **Is App IO real?** Drafted in the outbox. Rome already sends App IO notices; the real integration is App IO's
+  message API keyed by codice fiscale, which the office reads from the document.
+- **Why blockchain?** Two concrete jobs: anyone can check a message really came from the registered agent
+  (anti-scam), and custody of cash and valuables is tamper-evident.
+- **What if the AI is wrong?** The operator confirms every entry; the policy guard adds any required notice the
+  agent skipped; messages are draft-first; alert notifications need a prefix match or several consistent details.
+- **Would the office use it?** It is the challenge's brief (catalogue, pickup with delega and fees, quick intake,
+  returns and ownership) built on their real lists, with the same masking and fees (DGC 421/2023).
+- **Cost?** One intake is one short Claude call plus one tool turn; the phone line runs on ElevenLabs.
+
+## Submission (before 14:00, hub.team1.network)
+Register for the hackathon, create the project (stage **MVP**), choose challenge **03 Oggetti smarriti**, tick
+**Exa, ElevenLabs, Lovable, team1** under "In gara per", paste the live link, the repo and the video link.
+Re-submit if anything changes before 14:00.
 
 ## Fallbacks
 - No network: recorded video segment for the voice call.
@@ -38,5 +50,4 @@ Judging weights: idea & impact 1/3, technical execution 1/3, demo 1/3. One flow,
 - Chain not ready: custody shows "pending onchain"; Verify still works (signatures don't need gas).
 
 ## Video (3:00, required)
-Record the same script with OBS: screen + voice-over, one take per row above, cut together. Export 1080p,
-upload unlisted to YouTube; link in the submission form.
+Produced: Italian narration, real call, see docs/VIDEO_SCRIPT_IT.md. Upload unlisted to YouTube; link in the form.

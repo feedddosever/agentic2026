@@ -5,7 +5,7 @@ import {
   createPublicClient, createWalletClient, http, keccak256, encodePacked, parseAbi, toHex, stringToBytes,
   recoverMessageAddress, type Hex,
 } from "npm:viem@2.57.12";
-import { privateKeyToAccount } from "npm:viem@2.57.12/accounts";
+import { privateKeyToAccount, nonceManager } from "npm:viem@2.57.12/accounts";
 import { avalanche, avalancheFuji } from "npm:viem@2.57.12/chains";
 
 const RAW_PK = (Deno.env.get("AGENT_PRIVATE_KEY") ?? "").trim();
@@ -23,7 +23,7 @@ const EXPLORER = CHAIN_ID === 43114 ? "https://snowtrace.io" : "https://testnet.
 
 let account: ReturnType<typeof privateKeyToAccount> | null = null;
 try {
-  account = PK ? privateKeyToAccount(PK) : null;
+  account = PK ? privateKeyToAccount(PK, { nonceManager }) : null;
 } catch (e) {
   console.error("invalid AGENT_PRIVATE_KEY", e);
 }
@@ -77,7 +77,7 @@ export async function recoverSigner(payload_hash: Hex, signature: Hex) {
 
 export type CustodyEvent = "intake" | "routed" | "returned";
 
-export async function writeCustody(event: CustodyEvent, itemId: string, evidence: Hex, channel?: string) {
+export async function writeCustody(event: CustodyEvent, itemId: string, evidence: Hex, channel?: string, opts: { wait?: boolean } = {}) {
   if (!walletClient || !CONTRACT) return { tx_hash: null as string | null, error: "chain not configured" };
   try {
     const ih = itemHash(itemId);
@@ -86,8 +86,9 @@ export async function writeCustody(event: CustodyEvent, itemId: string, evidence
       ? [ih, toHex(stringToBytes((channel ?? "").slice(0, 31)), { size: 32 }), evidence]
       : [ih, evidence]) as never;
     const hash = await walletClient.writeContract({ address: CONTRACT, abi: ABI, functionName: fn, args });
-    // Fuji finalises in ~2 s; wait so the console can show a confirmed tx.
-    await publicClient.waitForTransactionReceipt({ hash, timeout: 20_000 }).catch(() => null);
+    // The hash is known as soon as the tx is sent and Fuji finalises in ~2 s, so by default we don't block the
+    // operator on the receipt (the nonce manager keeps intake → routed → returned in order).
+    if (opts.wait) await publicClient.waitForTransactionReceipt({ hash, timeout: 20_000 }).catch(() => null);
     return { tx_hash: hash as string, error: null };
   } catch (e) {
     return { tx_hash: null, error: String((e as Error).message ?? e).slice(0, 300) };
