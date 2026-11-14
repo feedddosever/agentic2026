@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 360" role="img" aria-label="Ritrovo">
+  <title>Ritrovo</title>
+  <rect x="20" y="40" width="280" height="280" rx="62" fill="#b44e2a"/>
+  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="22" transform="translate(20 40) scale(0.546875)">
+    <circle cx="196" cy="200" r="78" stroke-width="40"/>
+    <path d="M251 255 L372 376" stroke-width="40"/>
+    <path d="M330 334 L366 298" stroke-width="40"/>
+    <path d="M296 300 L326 270" stroke-width="40"/>
+  </g>
+  <text x="350" y="236" font-family="Caladea, Georgia, 'Times New Roman', serif" font-weight="700" font-size="190" fill="#1c1f26">Ritrovo</text>
+</svg>

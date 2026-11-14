@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Ritrovo">
+  <title>Ritrovo</title>
+  <rect width="512" height="512" rx="112" fill="#b44e2a"/>
+  <!-- key: ring (found) turning into a return arrow -->
+  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="40">
+    <circle cx="196" cy="200" r="78"/>
+    <path d="M251 255 L372 376"/>
+    <path d="M330 334 L366 298"/>
+    <path d="M296 300 L326 270"/>
+  </g>
+</svg>
