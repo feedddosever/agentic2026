@@ -151,7 +151,9 @@ async function toolVerify(b: Record<string, unknown>) {
   }[ownership];
   return json({
     item_id: id, ownership, questions: asked, verified_with: verifiedWith, note,
-    match: hit, last4_check_available: kinds.includes("last4"), // kept for older clients
+    // For clients that read "match": whether the answer given matches this record (prefix only as a fallback).
+    match: ownership === "verified" ? true : ownership === "failed" ? false : hit,
+    last4_check_available: kinds.includes("last4"),
   });
 }
 
