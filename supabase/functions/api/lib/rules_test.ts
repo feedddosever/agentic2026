@@ -93,3 +93,20 @@ Deno.test("ownership secrets come from the unpublished last four characters only
   assertEquals(secretSuffix("ZR4827316"), "7316");
   assertEquals(secretSuffix("AB1234"), null, "short numbers would overlap the published prefix");
 });
+
+import { recordLeaf, foldProof, toHex } from "./proof.ts";
+Deno.test("record proofs match the Python tree builder (pipeline/load_supabase.py)", async () => {
+  const root = "0x7fd08dd90636251dba33349ab5b506735f0d3174bbe85a6919ccab1659af7428";
+  const r0 = { id: "2026-1", date: "2026-01-02", objects: ["PORTAFOGLI", "PASSAPORTO ESTERO - Nr: ZR482* * * *"] };
+  const r2 = { id: "2026-3", date: "2026-01-03", objects: ["CARTA IDENTITA' ESTERA - Nr: 5813* * * *"] };
+  assertEquals(toHex(await foldProof(await recordLeaf(r0), [
+    "0x3a9f43fc920a50c157028eee99e53c125171e6d22307a349530943b59e3e806f",
+    "0x45cb0e696ee5f8ff7b3de7e8c39aad917e749f02a630e5c76de9f7d2961cdcd5"])), root);
+  assertEquals(toHex(await foldProof(await recordLeaf(r2), [
+    "0x536f263f5aecbb3b3ff19cffe84f67b604f3cb37b9a768542553ae8f6ea62f12",
+    "0x717049c99b4fff7d929a45e64c9e93f5ec5b15a4038b54ce8c4b5d0c38bdb54d"])), root);
+  // A changed record no longer proves.
+  assert(toHex(await foldProof(await recordLeaf({ ...r0, objects: ["PORTAFOGLI"] }), [
+    "0x3a9f43fc920a50c157028eee99e53c125171e6d22307a349530943b59e3e806f",
+    "0x45cb0e696ee5f8ff7b3de7e8c39aad917e749f02a630e5c76de9f7d2961cdcd5"])) !== root);
+});

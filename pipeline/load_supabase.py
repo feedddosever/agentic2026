@@ -66,6 +66,33 @@ def merkle_root(leaves):
     return "0x" + level[0].hex()
 
 
+def merkle_proofs(leaves):
+    """Proof (sibling hashes, leaf to root) for every leaf of the tree built by merkle_root()."""
+    level = sorted(leaves)
+    index = {leaf: i for i, leaf in enumerate(level)}
+    paths = {leaf: [] for leaf in level}
+    pos = dict(index)
+    while len(level) > 1:
+        if len(level) % 2:
+            level.append(level[-1])
+        for leaf, i in pos.items():
+            paths[leaf].append("0x" + level[i ^ 1].hex())
+        level = [hashlib.sha256(min(a, b) + max(a, b)).digest() for a, b in zip(level[::2], level[1::2])]
+        pos = {leaf: i // 2 for leaf, i in pos.items()}
+    return paths
+
+
+def store_proofs(ref, recs, dataset_id, batch=400):
+    """Save each record's Merkle proof so anyone can check it against the root anchored on Avalanche."""
+    leaves = {r["id"]: record_leaf(r) for r in recs}
+    paths = merkle_proofs(list(leaves.values()))
+    rows = [(rid, paths[leaf]) for rid, leaf in leaves.items()]
+    for i in range(0, len(rows), batch):
+        values = ",".join(f"({lit(rid)}, {lit(p)})" for rid, p in rows[i:i + batch])
+        sql(ref, f"update public.items set dataset_id = {int(dataset_id)}, merkle_proof = v.p "
+                 f"from (values {values}) as v(id, p) where items.id = v.id;")
+
+
 def main():
     ref = sys.argv[1]
     if "--migrate" in sys.argv:

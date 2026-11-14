@@ -330,3 +330,32 @@ and "note" (one sentence, show it under the result). Update the card:
    characters match. The office checks the full number against your ID at the counter."; match = false → as now.
 Never store or log the characters the user types.
 ```
+
+## Prompt 13: Avalanche trust on screen (track record and proof of publication)
+
+```
+Two new public cards. Both read the API (no auth).
+
+1. Verify page, inside the "Signing agent" card, add a section "Track record on Avalanche" from
+   GET {API}/agent/track-record. It returns { agent_id, office_address, office_url,
+   returns: { count, registry_url }, policy_validation: { count, avg_score, registry_url },
+   recent: [{ kind, item_id, score, explorer_url, created_at }] }. Show two big numbers side by side:
+   - "{returns.count} returns recorded by the office" with a small link "ERC-8004 Reputation" → returns.registry_url
+   - "{policy_validation.avg_score}/100 policy compliance over {policy_validation.count} decisions" with a small
+     link "ERC-8004 Validation" → policy_validation.registry_url
+   Under them, one line of small text: "Recorded by the office wallet {short office_address} (link office_url).
+   The agent can't rate itself: ERC-8004 forbids it." Then a collapsible "Recent records" list with kind
+   (feedback = "Return recorded", validation_request = "Decision submitted", validation_response = "Decision
+   validated"), score, time and a link to explorer_url. Label the whole section "Fuji testnet".
+
+2. Item page, new card "Proof of publication" under the objects card, from GET {API}/items/{id}/proof.
+   - If in_official_list and verified: green shield, title "In the city's official list", text "This record is in
+     the official list whose fingerprint Ritrovo anchored on Avalanche on {anchor.anchored_at as date}. The
+     one-year term of art. 929 c.c. runs from publication." Link "View on Avalanche" → anchor.explorer_url.
+     Collapsible "Technical details": leaf, number of proof steps (proof.length), computed_root, list.records,
+     list.source_url, and how_to_verify as small monospace text.
+   - If in_official_list is false: neutral card "Registered at the counter through Ritrovo. Its custody is logged
+     on Avalanche." with the existing custody timeline link.
+   - If verified is false but in_official_list is true: amber "Proof could not be checked right now".
+Load both cards lazily (they call the chain) with a small skeleton; never block the rest of the page.
+```

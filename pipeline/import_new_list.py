@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "pipeline"))
 os.chdir(ROOT)
 import build_dataset as bd  # noqa: E402  (loads word frequencies from the committed records)
-from load_supabase import lit, merkle_root, record_leaf, sql  # noqa: E402
+from load_supabase import lit, merkle_root, record_leaf, sql, store_proofs  # noqa: E402
 from parse_records import parse  # noqa: E402
 
 SERVICE_PAGE = "https://www.comune.roma.it/web/it/scheda-servizi.page?contentId=INF39645"
@@ -91,6 +91,8 @@ def main():
     sql(ref, f"insert into public.datasets (source_url, pdf_sha256, records, merkle_root) values "
              f"({lit(url)}, {lit(sha)}, {len(built)}, {lit(root)}) on conflict (pdf_sha256) do nothing;")
     print("fingerprint", sha[:16], root[:18])
+    ds = sql(ref, f"select id from public.datasets where pdf_sha256 = {lit(sha)}")
+    store_proofs(ref, built, ds[0]["id"])  # per-record proofs against the root anchored below
 
     print("anchor:", api("/chain/anchor-datasets", {}))
     if new:

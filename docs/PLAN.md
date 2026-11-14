@@ -312,3 +312,11 @@ Choices and why:
   demo: context prefetch (consulate + alert matches), one-turn drafting with early stop after finish, txs sent
   without waiting for receipts (nonce manager). Now ~12 s; all txs confirmed on Fuji. 12 rule tests, 20 smoke
   checks and the 11-step browser test pass. DEMO.md rewritten as a timed 3-minute run sheet with Q&A.
+- [17] Avalanche depth (builder's request: "1, 2 and 3"). (1) ERC-8004 Reputation: a separate office wallet
+  (key in Supabase secrets; ERC-8004 blocks self-feedback) records feedback on agent 302 after each return.
+  (2) ERC-8004 Validation: the agent submits each AI routing decision (public summary at /validation/:item) and the
+  office scores it against the policy. Both run after the response (waitUntil), so intake stays ~11 s.
+  (3) Proof of publication: Merkle proofs for all 15,843 official records stored (migration 0007; the daily
+  import stores them for new lists); /items/:id/proof checks them against the DatasetAnchored event read from
+  Avalanche. CustodyLog source verified on the explorer. Lovable prompt 13 shows the track record and the proof.
+  13 rule tests, 23 smoke checks pass; all new txs confirmed on Fuji.

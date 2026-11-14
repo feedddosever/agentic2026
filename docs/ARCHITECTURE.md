@@ -37,6 +37,18 @@
 if both match the registered agent. `/agent-registration.json` is the ERC-8004 registration file the identity
 registry points to.
 
+**ERC-8004, all three registries.** Identity: agent 302 signs every outgoing message. Validation: after each AI
+routing decision the agent posts a validation request whose URI is a public decision summary (`/validation/:item`,
+whose canonical JSON hashes to the request hash); the office wallet answers with a score (100 if the agent drafted
+every notice the policy requires, minus 50 per notice the policy guard had to add). Reputation: after each return
+the office wallet records feedback (tag `returned`). `/agent/track-record` reads both summaries from the
+registries. These txs run after the HTTP response (`EdgeRuntime.waitUntil`), so they add no latency.
+
+**Proof of publication.** Every official record has a stored Merkle proof (`items.merkle_proof`, made by
+`pipeline/load_supabase.py` and the daily import) against its list's root. `/items/:id/proof` recomputes the leaf
+and root and compares them with the `DatasetAnchored` event read back from Avalanche, so anyone can show that a
+record was in the city's list at the anchoring time (relevant to the one-year term of art. 929 c.c.).
+
 ## Design choices
 
 - **LLM proposes, policy disposes.** Notifications that the law or the office's practice require are computed

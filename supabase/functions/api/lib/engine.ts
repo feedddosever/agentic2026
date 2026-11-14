@@ -4,11 +4,18 @@ import { understandIntake, runToolLoop, llmEnabled, MODEL, type ToolSpec, type S
 import { parseNote, maskNumber, maskIds, idTokens, secretSuffix, requiredChannels, templateAppIo, templateEmbassy, templateAlertMatch, type ItemForRouting } from "./rules.ts";
 import { countryByCode } from "./countries.ts";
 import { exaEnabled, findMission } from "./exa.ts";
-import { signPayload, writeCustody, hashJson, explorerTx, type CustodyEvent } from "./chain.ts";
+import { signPayload, writeCustody, hashJson, explorerTx, validateDecision, giveReturnFeedback, type CustodyEvent } from "./chain.ts";
 import { voiceEnabled, outboundCall, voiceNote } from "./voice.ts";
 import { romeDate } from "./office.ts";
 
-export type Ctx = { db: SupabaseClient; pickupUrl: (id: string, lang: string) => string; verifyUrl: (outboxId: string) => string };
+export type Ctx = { db: SupabaseClient; pickupUrl: (id: string, lang: string) => string; verifyUrl: (outboxId: string) => string; apiUrl: (path: string) => string };
+
+// Work that may finish after the response (onchain trust records). Supabase keeps the isolate alive for it.
+declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined;
+function background(p: Promise<unknown>) {
+  const safe = p.catch((e) => console.error("background task failed", e));
+  try { if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(safe); } catch { /* not running on Supabase */ }
+}
 
 // ---------- catalogue helpers (mirror pipeline/build_dataset.py) ----------
 const CATS: [string, string[]][] = [
@@ -360,7 +367,28 @@ export async function route(ctx: Ctx, itemId: string) {
     const ev = hashJson({ id: itemId, decision, outbox: drafted.map((d) => d.outbox_id) });
     custodyRes = await custody(ctx, "routed", itemId, ev, decision);
   }
+  // ERC-8004 validation: the office scores the AI's decision against the policy (100 = the agent covered every
+  // required notice itself; each notice the policy guard had to add costs 50). Runs after the response.
+  if (mode === "llm") {
+    const summary = {
+      item_id: itemId, decision, model, required: required.map((r) => r.channel).sort(),
+      drafted: [...new Set(drafted.map((d) => d.channel))].sort(), policy_guard_added: guard,
+    };
+    background(recordValidation(ctx, itemId, summary, Math.max(0, 100 - 50 * guard.length)));
+  }
   return { decision, reason, mode, outbox_ids: drafted.map((d) => d.outbox_id), drafted, policy_guard_added: guard, error: llmError, custody: custodyRes };
+}
+
+async function recordValidation(ctx: Ctx, itemId: string, summary: Record<string, unknown>, score: number) {
+  const { data: row } = await ctx.db.from("erc8004_events").insert({ item_id: itemId, kind: "validation_request", score, payload: summary }).select("id").single();
+  const r = await validateDecision(ctx.apiUrl(`/validation/${encodeURIComponent(itemId)}`), summary, score);
+  if (row) await ctx.db.from("erc8004_events").update({ request_hash: r.request_hash, tx_hash: r.request_tx, error: r.error }).eq("id", row.id);
+  if (r.response_tx) await ctx.db.from("erc8004_events").insert({ item_id: itemId, kind: "validation_response", request_hash: r.request_hash, score, tx_hash: r.response_tx });
+}
+
+async function recordFeedback(ctx: Ctx, itemId: string, verifiedWith: string) {
+  const r = await giveReturnFeedback(itemId, verifiedWith, ctx.apiUrl(`/items/${encodeURIComponent(itemId)}/custody`));
+  await ctx.db.from("erc8004_events").insert({ item_id: itemId, kind: "feedback", score: 100, payload: { tag1: "returned", tag2: verifiedWith }, tx_hash: r.tx_hash, error: r.error });
 }
 
 // ---------- new official items vs alerts (Sentinel) ----------
@@ -389,7 +417,9 @@ export async function markReturned(ctx: Ctx, itemId: string, verifiedWith: strin
   await ctx.db.from("items").update({ status: "returned", returned_at: new Date().toISOString() }).eq("id", itemId);
   await ctx.db.from("alerts").update({ status: "closed" }).eq("matched_item_id", itemId);
   const ev = hashJson({ id: itemId, returned_at: new Date().toISOString().slice(0, 10), verified_with: verifiedWith });
-  return { status: "returned", custody: await custody(ctx, "returned", itemId, ev) };
+  const custodyRes = await custody(ctx, "returned", itemId, ev);
+  background(recordFeedback(ctx, itemId, verifiedWith)); // ERC-8004 reputation: the office records the return
+  return { status: "returned", custody: custodyRes, reputation: "recording on Avalanche" };
 }
 
 export async function flushCustody(ctx: Ctx) {

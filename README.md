@@ -50,6 +50,13 @@ waiting for people to search.**
 | Agent wallet (signs messages, writes custody) | [`0xD81fF9E6685A80C9cA31EE10c9311ebb66A70Fd1`](https://testnet.snowtrace.io/address/0xD81fF9E6685A80C9cA31EE10c9311ebb66A70Fd1) |
 | Official list 2025 anchored | [tx](https://testnet.snowtrace.io/tx/0x3c4b5212397fae6b528083ffaca4fb522542b2843520f52f441d4bf8425cb4fc) (8,903 records, Merkle root `0xbd9a1b35…`) |
 | Official list 2026 anchored | [tx](https://testnet.snowtrace.io/tx/0x168a4a1b2055247d9adffaaca8d219a3aff104c26459bd19327f4c8c4d5a21f2) (6,940 records, Merkle root `0xed0a52e4…`) |
+| Office wallet (Reparto Oggetti Rinvenuti) | [`0xA5cdA457e2053320FDF10099d14049C263612890`](https://testnet.snowtrace.io/address/0xA5cdA457e2053320FDF10099d14049C263612890): rates and validates the agent; ERC-8004 forbids an agent rating itself |
+| ERC-8004 Reputation | after every return the office records feedback on agent 302 (tag `returned`) in [`0x8004B663…388713`](https://testnet.snowtrace.io/address/0x8004B663056A597Dffe9eCcC1965A193B7388713) |
+| ERC-8004 Validation | every AI routing decision is submitted by the agent and scored 0–100 by the office against the policy (tag `policy`) in [`0x8004Cb1B…EB4272`](https://testnet.snowtrace.io/address/0x8004Cb1BF31DAf7788923b405b754f57acEB4272) |
+| Track record (live, read from the registries) | `GET /agent/track-record` |
+| Proof of publication | `GET /items/{id}/proof`: Merkle proof of any official record against the list root anchored above, checked against the onchain event |
+
+The contract source is verified on the explorer. Only hashes and scores go onchain, never personal data.
 
 ## Architecture
 

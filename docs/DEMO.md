@@ -20,7 +20,7 @@ Timings measured on the live system: AI proposal ~6 s, confirm + routing + both 
 | 0:30 | Operator console: paste the note (or dictate) → "Check and edit" | "At the counter the operator dictates a note. Claude proposes the register entry and masks the passport number." |
 | 0:45 | Confirm and save → (12 s) → Routed + Logged | "The operator confirms. The return agent decides who to tell: a US passport, so it drafts a message for the US consulate, with contacts Exa found. A fixed policy checks the agent: required notices always go out. Custody goes on Avalanche." |
 | 1:05 | Second tab, voice widget: "I lost my wallet with my passport this morning near Termini" → first five ZR482 → item on screen → last four 7316 → "it's yours" → pickup pack | "And the owner just calls, any hour, any language. The first characters are public, so the agent asks for the last four, which only the owner and the office know." |
-| 2:05 | Operator → Outbox → consulate message → Verify link (green, agent 302) → Queue → custody timeline | "Every message is signed by Ritrovo's ERC-8004 agent identity on Avalanche, so a consulate can check it and scammers can't fake it. Onchain: only hashes." |
+| 2:05 | Operator → Outbox → consulate message → Verify link (green, agent 302, track record) → item page "Proof of publication" | "Every message is signed by Ritrovo's ERC-8004 agent on Avalanche, so scammers can't fake it. The office scores every AI decision and records every return onchain: this is the agent's public track record. And any record can be proven to be in the city's official list. Onchain: only hashes." |
 | 2:40 | Home | "When the city publishes a new list, Ritrovo imports it overnight and alerts people who were looking. Ritrovo stops waiting to be searched, and starts returning. Open source, live today." |
 
 ## Likely questions
@@ -31,8 +31,13 @@ Timings measured on the live system: AI proposal ~6 s, confirm + routing + both 
   behind RLS; the chain stores salted hashes only.
 - **Is App IO real?** Drafted in the outbox. Rome already sends App IO notices; the real integration is App IO's
   message API keyed by codice fiscale, which the office reads from the document.
-- **Why blockchain?** Two concrete jobs: anyone can check a message really came from the registered agent
-  (anti-scam), and custody of cash and valuables is tamper-evident.
+- **Why blockchain?** Concrete jobs, all public and checkable: anyone can check a message really came from the
+  registered agent (anti-scam); custody of cash and valuables is tamper-evident; the office publicly validates
+  each AI decision and records each return (ERC-8004 validation and reputation), so the agent's track record can't
+  be faked; and any record can be proven to be in the city's official list (Merkle proof against the anchored
+  root), which matters because the one-year term of art. 929 c.c. runs from publication.
+- **Why does the office have its own wallet?** ERC-8004 forbids an agent's owner from rating or validating its
+  own agent. In production the office holds that key; Ritrovo runs the agent.
 - **What if the AI is wrong?** The operator confirms every entry; the policy guard adds any required notice the
   agent skipped; messages are draft-first; alert notifications need a prefix match or several consistent details.
 - **Would the office use it?** It is the challenge's brief (catalogue, pickup with delega and fees, quick intake,

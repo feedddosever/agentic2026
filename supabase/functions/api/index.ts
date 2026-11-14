@@ -1,13 +1,14 @@
 // Ritrovo API: one Supabase Edge Function, small router.
 // Public:   /tools/* (agent tools), /items/:id, /items/:id/custody, /pickup/:id(+/delega.pdf), /stats, /datasets,
-//           /verify/:id, /agent-registration.json, /health
+//           /verify/:id, /agent-registration.json, /agent/track-record, /validation/:itemId, /items/:id/proof, /health
 // Operator (header x-operator-token): /intake, /engine/route, /items/:id/return, /queue, /outbox, /alerts,
 //           /alerts/match, /chain/flush, /admin/status, /admin/embassy
 import { createClient } from "npm:@supabase/supabase-js@2.49.4";
 import { OFFICE, computeFees, claimHorizon, documentsToBring, romeDate } from "./lib/office.ts";
 import { fillDelega } from "./lib/delega.ts";
 import { intake, previewIntake, route, secretHash, markReturned, flushCustody, alertMatches, scanAlerts, outboxPayload, maskContact, type Ctx } from "./lib/engine.ts";
-import { chainInfo, explorerTx, recoverSigner, hashJson, agentBalance, agentAddress, anchorDataset, AGENT_ID, IDENTITY_REGISTRY } from "./lib/chain.ts";
+import { chainInfo, explorerTx, recoverSigner, hashJson, agentBalance, agentAddress, anchorDataset, AGENT_ID, IDENTITY_REGISTRY, trackRecord, anchoredList, canonical, officeAddress } from "./lib/chain.ts";
+import { recordLeaf, foldProof, toHex, HOW_TO_VERIFY } from "./lib/proof.ts";
 import { exaEnabled, otherOffices, findMission } from "./lib/exa.ts";
 import { llmEnabled, MODEL } from "./lib/llm.ts";
 import { countryByCode } from "./lib/countries.ts";
@@ -32,7 +33,7 @@ const bad = (msg: string, status = 400) => json({ error: msg }, status);
 const pickupUrl = (id: string, lang: string) =>
   APP_URL ? `${APP_URL}/pickup/${encodeURIComponent(id)}?lang=${lang}` : `${API_BASE}/pickup/${encodeURIComponent(id)}?lang=${lang}`;
 const verifyUrl = (id: string) => (APP_URL ? `${APP_URL}/verify/${id}` : `${API_BASE}/verify/${id}`);
-const ctx: Ctx = { db, pickupUrl, verifyUrl };
+const ctx: Ctx = { db, pickupUrl, verifyUrl, apiUrl: (p: string) => `${API_BASE}${p}` };
 
 type Item = {
   id: string; date_acquired: string; objects: string[]; categories: string[]; id_doc: string;
@@ -137,6 +138,54 @@ async function toolVerify(b: Record<string, unknown>) {
       : "The first characters do not match this record.",
   }[ownership];
   return json({ item_id: id, match: !!hit, ownership, last4_check_available: available, note });
+}
+
+// ---------- trust: proofs of publication and the agent's onchain track record ----------
+
+/** Proof that an official-list record is in the list whose fingerprint was anchored on Avalanche. */
+async function itemProof(id: string) {
+  const { data: it } = await db.from("items").select("id, source, date_acquired, objects, dataset_id, merkle_proof").eq("id", id).maybeSingle();
+  if (!it) return bad("unknown item", 404);
+  if (it.source !== "official_list" || !it.dataset_id || !it.merkle_proof) {
+    return json({ item_id: id, in_official_list: false, note: "Registered at the counter through Ritrovo: its custody is logged on Avalanche instead.", custody_url: `${API_BASE}/items/${encodeURIComponent(id)}/custody` });
+  }
+  const { data: ds } = await db.from("datasets").select("source_url, pdf_sha256, records, merkle_root, tx_hash").eq("id", it.dataset_id).single();
+  const leaf = await recordLeaf({ id: it.id, date: it.date_acquired, objects: it.objects });
+  const root = toHex(await foldProof(leaf, it.merkle_proof));
+  const onchain = ds?.tx_hash ? await anchoredList(ds.tx_hash).catch(() => null) : null;
+  return json({
+    item_id: id, in_official_list: true,
+    list: { source_url: ds?.source_url, pdf_sha256: ds?.pdf_sha256, records: ds?.records },
+    leaf: toHex(leaf), proof: it.merkle_proof, computed_root: root, root_matches_list: root === ds?.merkle_root,
+    anchor: onchain && ds?.tx_hash ? {
+      tx_hash: ds.tx_hash, explorer_url: explorerTx(ds.tx_hash), anchored_at: onchain.anchored_at, merkle_root: onchain.merkle_root,
+      root_matches: onchain.merkle_root.toLowerCase() === root.toLowerCase(),
+      pdf_matches: onchain.pdf_sha256.toLowerCase() === `0x${ds.pdf_sha256}`.toLowerCase(),
+    } : null,
+    verified: !!onchain && onchain.merkle_root.toLowerCase() === root.toLowerCase(),
+    how_to_verify: HOW_TO_VERIFY,
+  });
+}
+
+let trackCache: { at: number; value: unknown } | null = null;
+async function agentTrackRecord() {
+  if (!trackCache || Date.now() - trackCache.at > 30_000) trackCache = { at: Date.now(), value: await trackRecord() };
+  const { data: recent } = await db.from("erc8004_events").select("kind, item_id, score, tx_hash, created_at").not("tx_hash", "is", null).order("created_at", { ascending: false }).limit(6);
+  return json({ ...(trackCache.value as Record<string, unknown> ?? {}), recent: (recent ?? []).map((r) => ({ ...r, explorer_url: explorerTx(r.tx_hash) })) });
+}
+
+/** The public decision summary the office validated (the requestURI of the ERC-8004 validation request). */
+async function validationRecord(itemId: string) {
+  const { data: rows } = await db.from("erc8004_events").select("kind, request_hash, score, payload, tx_hash, created_at").eq("item_id", itemId).in("kind", ["validation_request", "validation_response"]).order("created_at", { ascending: false });
+  const req = (rows ?? []).find((r) => r.kind === "validation_request");
+  if (!req) return bad("no validation for this item", 404);
+  const res = (rows ?? []).find((r) => r.kind === "validation_response" && r.request_hash === req.request_hash);
+  return json({
+    ...req.payload, score: req.score, validator: officeAddress, request_hash: req.request_hash,
+    request_hash_recomputed: hashJson(req.payload), canonical_payload: canonical(req.payload),
+    request_tx: explorerTx(req.tx_hash), response_tx: explorerTx(res?.tx_hash ?? null),
+    scoring: "100 if the agent drafted every notice the policy requires; minus 50 for each notice the policy guard had to add.",
+  });
 }
 
 async function toolFees(b: Record<string, unknown>) {
@@ -284,7 +333,7 @@ function agentRegistration() {
     x402Support: false,
     active: true,
     registrations: AGENT_ID ? [{ agentId: Number(AGENT_ID), agentRegistry: ci.agent_registry }] : [],
-    supportedTrust: ["reputation"],
+    supportedTrust: ["reputation", "validation"],
   });
 }
 
@@ -425,6 +474,9 @@ Deno.serve(async (req) => {
       if (path === "/config") return json({ voice_agent_id: VOICE_AGENT_ID(), app_url: APP_URL || null, chain: chainInfo() });
       if ((m = path.match(/^\/verify\/([\w-]+)$/))) return await verifyMessage(m[1]);
       if ((m = path.match(/^\/items\/([\w-]+)\/custody$/))) return await custodyTimeline(m[1]);
+      if ((m = path.match(/^\/items\/([\w-]+)\/proof$/))) return await itemProof(m[1]);
+      if ((m = path.match(/^\/validation\/([\w-]+)$/))) return await validationRecord(m[1]);
+      if (path === "/agent/track-record") return await agentTrackRecord();
       if ((m = path.match(/^\/items\/([\w-]+)$/))) {
         const item = await getItem(m[1]);
         return item ? json(itemCard(item)) : bad("unknown item", 404);
