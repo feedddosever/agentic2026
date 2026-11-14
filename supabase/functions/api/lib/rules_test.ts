@@ -119,6 +119,8 @@ Deno.test("cash amounts never reach public text; they become a private ownership
   assertEquals(maskMoney("A black wallet with a US passport and 40 euros in cash."), "A black wallet with a US passport and cash.");
   assertEquals(maskMoney("Wallet with €35 and a card"), "Wallet with cash and a card");
   assert(!/\d/.test(maskMoney("200 dollars and 20 euro")));
+  assertEquals(maskMoney("A black wallet containing two 20-euro banknotes, found with a passport."), "A black wallet containing cash, found with a passport.");
+  assertEquals(maskMoney("a 50 euro note and 3 coins"), "cash and 3 coins");
   assertEquals(cashKey("40"), "40"); assertEquals(cashKey("40,50 €"), "40.5"); assertEquals(cashKey(""), null); assertEquals(cashKey(-1), null);
   const f = parseNote("Portafoglio con 40 euro e passaporto americano ZR4827316");
   assert(!JSON.stringify(f.objects).includes("40") && !f.description_en.includes("40"), JSON.stringify(f));

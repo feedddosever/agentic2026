@@ -67,7 +67,7 @@ const PROTECT = /https?:\/\/\S+|\bIN-\d{6}-[A-Z0-9]{4}\b|\{VERIFY_URL\}/gi;
 /** Mask every identifier-like token in free text (operator notes, model output, message bodies). */
 // Cash amounts are an ownership secret: the official list writes "DENARO EURO" with no amount, and the office asks
 // the claimant how much was inside. Public text never carries an amount.
-const MONEY = /(?:€|\$|£)\s*\d+(?:[.,]\d{1,2})?|\b\d+(?:[.,]\d{1,2})?\s*(?:€|euros?|eur|dollars?|dollari|usd|pounds?|sterline|gbp)\b/gi;
+const MONEY = /(?:\b(?:a|an|one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+)?(?:(?:€|\$|£)\s*\d+(?:[.,]\d{1,2})?|\b\d+(?:[.,]\d{1,2})?\s*-?\s*(?:€|euros?|eur|dollars?|dollari|usd|pounds?|sterline|gbp)\b)(?:\s+(?:bank\s*notes?|banknotes?|notes?|bills?|coins?|in\s+cash))?/gi;
 export function maskMoney(s: string): string {
   return s.replace(MONEY, "cash").replace(/\bcash(\s+in)?\s+cash\b/gi, "cash");
 }

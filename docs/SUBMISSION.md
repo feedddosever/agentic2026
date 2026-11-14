@@ -4,19 +4,31 @@ Steps: register for the hackathon → create the project → stage **MVP** → c
 "In gara per": **Exa, ElevenLabs, Lovable, team1 (Avalanche)** → paste the fields below → submit. If anything
 changes before 14:00, update the submission.
 
+Fields in the order of the manual's checklist (team lead name and email: yours, the email used on Lu.ma).
+
 - **Nome del progetto:** Ritrovo
-- **Team:** solo
-- **Sfida:** 03 – Oggetti smarriti
+- **Nome del team lead:** _(your name)_
+- **Email del team lead:** _(your Lu.ma email)_
+- **Altri membri del team:** nessuno (solo)
+- **Sfida scelta:** 03 – Oggetti smarriti
 - **Link al progetto online:** https://screenshot-to-spark-3870.lovable.app
-- **Repository:** https://github.com/feedddosever/agentic2026
-- **Video:** _(YouTube unlisted link)_
+- **URL della repository:** https://github.com/feedddosever/agentic2026
+- **Link al video (3 minuti):** _(YouTube unlisted link)_
+- **Deploy su Avalanche:** CustodyLog `0xa5aAb3b1743922ED1eabaB6C2647787B92807B48` (Fuji); ERC-8004 agent 302
+
+**Cosa fa il vostro progetto? (2–3 frasi)**
+Rome publishes its found objects as PDF lists that can't be searched; Ritrovo decoded all 15,843 records into a
+catalogue that tourists can search in six languages and ask about by voice in 20. At the counter, Claude turns a
+photo and a note into the register entry, and a return agent checked by fixed rules alerts the right consulate or
+citizen; ownership is proved with details never published. Every message is signed by an ERC-8004 agent and custody,
+returns and the office's validation of each AI decision are verifiable on Avalanche, with no personal data onchain.
 
 **Descrizione in una riga**
 Ritrovo decodes Rome's unsearchable lost-and-found lists and returns items to their owners: a searchable catalogue
 in six languages, a voice assistant in 20 languages, AI intake for the office, consulate routing, and ownership
 checks and custody that anyone can verify on Avalanche.
 
-**Cosa fa il progetto**
+**Longer description (if the form has room)**
 Rome's lost-and-found office publishes ~600 found objects a month in PDFs whose text can't be searched. We decoded
 all 15,843 records exactly, and they're open data now. Half of them contain an identity document, so the owner can
 be found: Ritrovo returns items instead of waiting to be searched.
