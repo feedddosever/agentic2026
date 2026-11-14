@@ -21,13 +21,18 @@ Timings measured on the live system: AI proposal ~6 s, confirm + routing + both 
 | 0:45 | Confirm and save → (12 s) → Routed + Logged | "The operator confirms. The return agent decides who to tell: a US passport, so it drafts a message for the US consulate, with contacts Exa found. A fixed policy checks the agent: required notices always go out. Custody goes on Avalanche." |
 | 1:05 | Second tab, voice widget: "I lost my wallet with my passport this morning near Termini" → first five ZR482 → item on screen → last four 7316 → "it's yours" → pickup pack | "And the owner just calls, any hour, any language. The first characters are public, so the agent asks for the last four, which only the owner and the office know." |
 | 2:05 | Operator → Outbox → consulate message → Verify link (green, agent 302, track record) → item page "Proof of publication" | "Every message is signed by Ritrovo's ERC-8004 agent on Avalanche, so scammers can't fake it. The office scores every AI decision and records every return onchain: this is the agent's public track record. And any record can be proven to be in the city's official list. Onchain: only hashes." |
-| 2:40 | Home | "When the city publishes a new list, Ritrovo imports it overnight and alerts people who were looking. Ritrovo stops waiting to be searched, and starts returning. Open source, live today." |
+| 2:40 | Home: type "wallet" (or "钱包") in the search box | "Tourists search in their language: the register is Italian, Ritrovo translates. When the city publishes a new list, Ritrovo imports it overnight and alerts people who were looking. Ritrovo stops waiting to be searched, and starts returning. Open source, live today." |
 
 ## Likely questions
 - **The first five characters are public, so how is that proof?** It isn't, and we don't treat it as proof: they
   only find the item. At intake we keep salted hashes of details that are never published (the last four
   characters, the cash amount, which the official list never shows either); the owner must say one, with 5 tries
   an hour. Records from the old PDFs have no private details, so there the office checks the ID at the counter.
+- **Can tourists use it?** Search works in English, Spanish, French, German and Chinese, object names are shown
+  translated, the voice assistant speaks 20 languages and switches by itself, and anyone who lost a passport is
+  told how to get an emergency travel document from their consulate, with its contacts.
+- **Is there a phone number?** Not yet: the assistant works in the browser like any voice assistant; for a person,
+  the site shows the office's numbers (the agent gives them too).
 - **Privacy / GDPR?** Only what the city already publishes; full numbers are masked before storage or AI; contacts
   behind RLS; the chain stores salted hashes only.
 - **Is App IO real?** Drafted in the outbox. Rome already sends App IO notices; the real integration is App IO's
