@@ -1,4 +1,4 @@
-# Ritrovo – script del video (2:58, italiano)
+# Ritrovo – script del video (3:00, italiano)
 
 Formato: registrazione dello schermo dell'app pubblicata, con voce narrante in italiano.
 La scena 4 contiene una telefonata reale con l'agente vocale, in inglese e sottotitolata in italiano: mostra che la
@@ -6,12 +6,12 @@ linea risponde nella lingua di chi chiama.
 
 | # | Tempo | Sullo schermo | Voce narrante |
 |---|---|---|---|
-| 1 | 0:00–0:21 | Pagina 1 dell'elenco ufficiale (PDF) → riquadro con il testo copiato: solo simboli | **Il problema** |
-| 2 | 0:21–0:45 | Tabella dei glifi decifrati → home di Ritrovo, con evidenziati 15.843 reperti e 7.649 con documento | **La decifrazione** |
-| 3 | 0:45–1:17 | Console operatore: nota dettata → proposta dell'IA (numero oscurato) → conferma → "Inoltrato al consolato" → transazione su Avalanche | **L'ufficio** |
-| 4 | 1:17–2:22 | Sito pubblico guidato dalla telefonata: risultati per prefisso, scheda del reperto, pacchetto ritiro | **Il cittadino**, poi la telefonata |
-| 5 | 2:22–2:42 | Pagina "Verifica un messaggio" (scudo verde, agente ERC-8004 n. 302) → registro di custodia con le transazioni | **La fiducia** |
-| 6 | 2:42–2:58 | Pagina "Get alerted" → cartolina finale (link all'app e al repository) | **Chiusura** |
+| 1 | 0:00–0:20 | Pagina 1 dell'elenco ufficiale (PDF) → riquadro con il testo copiato: solo simboli | **Il problema** |
+| 2 | 0:20–0:45 | Tabella dei glifi decifrati → home di Ritrovo, con evidenziati 15.843 reperti e 7.649 con documento | **La decifrazione** |
+| 3 | 0:45–1:17 | Console operatore: nota → proposta dell'IA (numero oscurato, importo del denaro non pubblicato) → conferma → "Inoltrato al consolato" → transazione su Avalanche | **L'ufficio** |
+| 4 | 1:17–2:22 | Sito pubblico guidato dalla telefonata: risultati per prefisso, scheda del reperto (nomi tradotti), verifica con gli ultimi 4 caratteri, pacchetto ritiro con i contatti dell'ambasciata | **Il cittadino**, poi la telefonata |
+| 5 | 2:22–2:44 | Pagina "Verifica un messaggio" (agente ERC-8004 n. 302) → curriculum su Avalanche (restituzioni registrate dall'ufficio, convalida delle decisioni) → prova di pubblicazione di un reperto | **La fiducia** |
+| 6 | 2:44–3:00 | Pagina "Get alerted" → cartolina finale (link all'app e al repository) | **Chiusura** |
 
 ## Testi della voce narrante
 
@@ -34,9 +34,9 @@ passaggio di custodia viene registrato su Avalanche.
 La sera, il proprietario chiama Ritrovo. A qualsiasi ora, nella sua lingua.
 
 **5 · La fiducia**
-Ogni messaggio è firmato dall'agente Ritrovo, registrato su Avalanche con lo standard ERC ottomilaquattro: chiunque può
-verificarlo, e un truffatore non può imitarlo. Sulla blockchain finiscono solo impronte crittografiche, mai dati
-personali.
+Ogni messaggio è firmato dall'agente Ritrovo, registrato su Avalanche con lo standard ERC ottomilaquattro. L'ufficio
+convalida ogni decisione automatica e registra ogni restituzione: è il curriculum pubblico dell'agente. Sulla
+blockchain, mai dati personali.
 
 **6 · Chiusura**
 E quando il Comune pubblica un nuovo elenco, Ritrovo lo importa da solo e avvisa chi lo stava cercando. Ritrovo:
@@ -47,11 +47,13 @@ smettiamo di aspettare che le persone cerchino, e iniziamo a restituire.
 Chi chiama, in inglese:
 1. *"Hi, I lost my wallet with my passport yesterday evening, on metro line A near Termini."*
 2. *"The passport number starts with Z R 4 8 2."*
-3. *"Yes, that's mine! What do I need to bring?"*
+3. *"Yes, that sounds like mine. The last four are 7, 3, 1, 6."*
 
-L'agente risponde con gli strumenti reali: ricerca, verifica del prefisso, costi e pacchetto ritiro. Lo schermo segue
-la conversazione attraverso i suoi client tool (`show_search_results`, `show_item`, `show_pickup_pack`), riprodotti con
-la stessa sequenza. I sottotitoli in italiano sono in `scripts/video/s4_subs.ass`.
+L'agente usa gli strumenti reali. I primi cinque caratteri sono pubblici, quindi servono solo a trovare il reperto. Per
+la proprietà chiede gli ultimi quattro, che sono registrati allo sportello e mai pubblicati. Poi conferma e dà il
+pacchetto ritiro. Lo schermo segue la conversazione attraverso i client tool (`show_search_results`, `show_item`,
+`show_pickup_pack`). Due didascalie spiegano il passaggio chiave. I sottotitoli in italiano sono in
+`scripts/video/s4_subs.ass`.
 
 ## Come è stato prodotto
 

@@ -3,9 +3,9 @@ const { chromium } = require('playwright');
 const [,, outDir, item] = process.argv;
 const APP = 'https://screenshot-to-spark-3870.lovable.app';
 const SCHEDULE = [
-  [30.4, `/?prefix=ZR482&lost_from=2026-11-13&lost_to=2026-11-14`],
-  [34.3, `/item/${item}`],
-  [48.2, `/pickup/${item}`],
+  [28.2, `/?prefix=ZR482&lost_from=2026-11-13&lost_to=2026-11-14`],
+  [33.8, `/item/${item}`],
+  [49.8, `/pickup/${item}`],
 ];
 (async () => {
   const browser = await chromium.launch({ proxy: { server: process.env.HTTPS_PROXY } });
@@ -26,9 +26,9 @@ const SCHEDULE = [
       await page.evaluate((u) => { history.pushState({}, '', u); dispatchEvent(new PopStateEvent('popstate')); }, url);
       console.log('NAV', s, url);
     }
-    await at(59.5);
+    await at(57.3);
     for (let y = 0; y <= 660; y += 4) { await page.evaluate((yy) => window.scrollTo(0, yy), y); await page.waitForTimeout(16); }
-    await at(66);
+    await at(67);
     await page.screenshot({ path: outDir + '/../frames/s4_end.png', fullPage: true });
   } catch (e) { console.error('ERR', e.message); }
   await ctx.close(); await browser.close();

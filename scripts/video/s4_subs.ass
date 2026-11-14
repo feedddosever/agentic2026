@@ -12,14 +12,15 @@ Style: Sub,Inter,30,&H00FFFFFF,&H00FFFFFF,&H40201C1C,&H40201C1C,0,0,0,0,100,100,
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: 0,0:00:05.60,0:00:10.50,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Ciao, sono Ritrovo, l'assistente per gli oggetti smarriti di Roma. Cosa hai perso?
 Dialogue: 0,0:00:11.00,0:00:16.30,Sub,,0,0,0,,{\c&H8FB0FF&}Chi chiama:{\c&HFFFFFF&} Ciao, ieri sera ho perso il portafoglio con il passaporto, sulla metro A vicino a Termini.
-Dialogue: 0,0:00:16.70,0:00:18.10,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Mi dispiace.
-Dialogue: 0,0:00:18.20,0:00:23.80,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Visto che nel portafoglio c'era il passaporto, mi dici solo i primi cinque caratteri del numero?
-Dialogue: 0,0:00:24.10,0:00:26.90,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Mi bastano quelli, mai il numero completo.
-Dialogue: 0,0:00:27.30,0:00:30.60,Sub,,0,0,0,,{\c&H8FB0FF&}Chi chiama:{\c&HFFFFFF&} Il numero del passaporto inizia con Z R 4 8 2.
-Dialogue: 0,0:00:34.00,0:00:34.95,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Buone notizie!
-Dialogue: 0,0:00:35.00,0:00:42.70,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Ieri è stato trovato un portafoglio con un passaporto straniero che inizia con ZR482: corrisponde a quello che mi hai detto.
-Dialogue: 0,0:00:43.00,0:00:45.50,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Contiene anche quaranta euro in contanti.
-Dialogue: 0,0:00:45.90,0:00:48.30,Sub,,0,0,0,,{\c&H8FB0FF&}Chi chiama:{\c&HFFFFFF&} Sì, è mio! Cosa devo portare?
-Dialogue: 0,0:00:49.40,0:00:51.80,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Perfetto, ho preparato i dettagli per il ritiro.
-Dialogue: 0,0:00:52.10,0:00:57.20,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Porta un documento d'identità con foto in Circonvallazione Ostiense 191, a Roma,
-Dialogue: 0,0:00:57.40,0:01:03.30,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} e indica il numero di registro IN-261113-342D.
+Dialogue: 0,0:00:16.70,0:00:18.00,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Mi dispiace.
+Dialogue: 0,0:00:18.10,0:00:21.60,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Mi dici solo i primi cinque caratteri del numero del passaporto?
+Dialogue: 0,0:00:22.10,0:00:24.60,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Mi bastano quelli, mai il numero completo.
+Dialogue: 0,0:00:25.10,0:00:28.40,Sub,,0,0,0,,{\c&H8FB0FF&}Chi chiama:{\c&HFFFFFF&} Il numero del passaporto inizia con Z R 4 8 2.
+Dialogue: 0,0:00:32.00,0:00:32.90,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Buone notizie!
+Dialogue: 0,0:00:33.00,0:00:37.10,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Ho trovato un portafoglio con un passaporto straniero e del denaro, consegnato oggi.
+Dialogue: 0,0:00:37.30,0:00:40.40,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Il numero del passaporto inizia con gli stessi caratteri che mi hai dato.
+Dialogue: 0,0:00:40.60,0:00:45.00,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Per confermare che è tuo, mi dici gli ultimi quattro caratteri del numero?
+Dialogue: 0,0:00:45.40,0:00:49.10,Sub,,0,0,0,,{\c&H8FB0FF&}Chi chiama:{\c&HFFFFFF&} Sì, sembra il mio. Gli ultimi quattro sono 7 3 1 6.
+Dialogue: 0,0:00:50.30,0:00:52.40,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Perfetto! È confermato: è tuo.
+Dialogue: 0,0:00:52.60,0:00:56.90,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} L'ufficio è in Circonvallazione Ostiense 191, a Roma.
+Dialogue: 0,0:00:57.10,0:01:04.20,Sub,,0,0,0,,{\c&HCFD67F&}Ritrovo:{\c&HFFFFFF&} Porta un documento d'identità valido e indica il numero di registro IN-261114-F007.
