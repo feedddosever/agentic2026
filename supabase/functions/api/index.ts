@@ -106,7 +106,7 @@ async function toolSearch(b: Record<string, unknown>) {
     window: from || to ? { found_from: from, found_to: to } : null,
     also_searched_for: expanded.added.length ? expanded.added : undefined,
     results: rows.map((r) => itemCard(r, lang)),
-    passport_help: aboutPassport ? PASSPORT_HELP : undefined,
+    passport_help: aboutPassport ? passportHelp(lang) : undefined,
     guidance: prefixGiven
       ? (total ? "Ownership prefix matches. Offer fees and the pickup pack." : "No record with that document/IMEI prefix. Offer a search by description or an alert.")
       : total > 5
@@ -119,14 +119,15 @@ async function toolSearch(b: Record<string, unknown>) {
 
 // ---------- passports: where tourists go to travel home ----------
 
-const PASSPORT_HELP = {
-  title: "Need to travel before you get your passport back?",
-  text: "Your country's embassy or consulate in Rome can issue an emergency travel document. They usually ask for " +
-    "a report of the loss (denuncia di smarrimento, free, at any Polizia di Stato or Carabinieri station) and passport " +
-    "photos. If your passport is listed here, tell them the record number: it is kept at the lost-and-found office " +
-    "until you or your consulate collect it.",
-  consulates_url: `${API_BASE}/consulates`,
+const PASSPORT_TEXT: Record<string, { title: string; text: string }> = {
+  en: { title: "Need to travel before you get your passport back?", text: "Your country's embassy or consulate in Rome can issue an emergency travel document. They usually ask for a report of the loss (denuncia di smarrimento, free, at any Polizia di Stato or Carabinieri station) and passport photos. If your passport is listed here, tell them the record number: it is kept at the lost-and-found office until you or your consulate collect it." },
+  it: { title: "Devi viaggiare prima di riavere il passaporto?", text: "L'ambasciata o il consolato del tuo Paese a Roma può rilasciare un documento di viaggio d'emergenza. Di solito chiede la denuncia di smarrimento (gratuita, in qualsiasi ufficio della Polizia di Stato o stazione dei Carabinieri) e fototessere. Se il tuo passaporto è in elenco, indica il numero di registro: è custodito all'ufficio oggetti rinvenuti finché tu o il tuo consolato non lo ritirate." },
+  es: { title: "¿Necesita viajar antes de recuperar su pasaporte?", text: "La embajada o el consulado de su país en Roma puede expedir un documento de viaje de emergencia. Normalmente piden la denuncia de pérdida (denuncia di smarrimento, gratuita, en cualquier comisaría de la Polizia di Stato o cuartel de los Carabinieri) y fotos de pasaporte. Si su pasaporte aparece aquí, indique el número de registro: se guarda en la oficina de objetos perdidos hasta que usted o su consulado lo recojan." },
+  fr: { title: "Vous devez voyager avant de récupérer votre passeport ?", text: "L'ambassade ou le consulat de votre pays à Rome peut délivrer un document de voyage d'urgence. Ils demandent généralement une déclaration de perte (denuncia di smarrimento, gratuite, dans tout commissariat de la Polizia di Stato ou poste des Carabinieri) et des photos d'identité. Si votre passeport figure ici, indiquez le numéro d'enregistrement : il est conservé au bureau des objets trouvés jusqu'à ce que vous ou votre consulat veniez le chercher." },
+  de: { title: "Müssen Sie reisen, bevor Sie Ihren Pass zurückbekommen?", text: "Die Botschaft oder das Konsulat Ihres Landes in Rom kann ein Notreisedokument ausstellen. Meist werden eine Verlustanzeige (denuncia di smarrimento, kostenlos, bei jeder Dienststelle der Polizia di Stato oder der Carabinieri) und Passfotos verlangt. Wenn Ihr Pass hier aufgeführt ist, nennen Sie die Registernummer: Er wird im Fundbüro aufbewahrt, bis Sie oder Ihr Konsulat ihn abholen." },
+  zh: { title: "在取回护照之前需要出行吗？", text: "您所在国家驻罗马的大使馆或领事馆可以签发紧急旅行证件。通常需要提供遗失报案证明（denuncia di smarrimento，可在任何国家警察局或宪兵站免费办理）和证件照。如果您的护照在此列出，请告知记录编号：护照会保存在失物招领处，直到您本人或您的领事馆前来领取。" },
 };
+const passportHelp = (lang?: string | null) => ({ ...(PASSPORT_TEXT[(lang ?? "en").slice(0, 2)] ?? PASSPORT_TEXT.en), consulates_url: `${API_BASE}/consulates` });
 
 /** A country's mission in Rome from the cache; if missing, found with Exa from official sources and stored. */
 async function consulateFor(countryOrCode: string) {
@@ -148,7 +149,7 @@ async function consulateFor(countryOrCode: string) {
 async function toolConsulate(b: Record<string, unknown>) {
   const q = String(b.country ?? "").trim();
   if (!q) return bad("country required");
-  return json({ ...(await consulateFor(q)), help: PASSPORT_HELP.text });
+  return json({ ...(await consulateFor(q)), help: passportHelp("en").text });
 }
 
 /** Ownership check. The first characters of a number are public (they only FIND the item), so proof comes from
@@ -348,7 +349,7 @@ async function pickupPage(id: string, url: URL) {
     office: { ...OFFICE, hours: lang.startsWith("it") ? OFFICE.hours.it : OFFICE.hours.en },
     documents_to_bring: documentsToBring(lang),
     passport_help: item.objects.some((o) => o.startsWith("PASSAPORTO ESTERO"))
-      ? { ...PASSPORT_HELP, consulate: await nationalityConsulate(item.id) }
+      ? { ...passportHelp(lang), consulate: await nationalityConsulate(item.id) }
       : undefined,
     ...pickupLinks(item.id, lang, url.searchParams.get("owner") ?? undefined, url.searchParams.get("delegate") ?? undefined),
   });
@@ -574,11 +575,11 @@ Deno.serve(async (req) => {
         if (!item) return bad("unknown item", 404);
         await ensureTerms(db);
         const lang = (url.searchParams.get("lang") ?? "").slice(0, 2);
-        return json({ ...itemCard(item, lang), passport_help: item.objects.some((o) => o.startsWith("PASSAPORTO ESTERO")) ? PASSPORT_HELP : undefined });
+        return json({ ...itemCard(item, lang), passport_help: item.objects.some((o) => o.startsWith("PASSAPORTO ESTERO")) ? passportHelp(lang) : undefined });
       }
       if (path === "/consulates") {
         const { data } = await db.from("embassies").select("country_code, country, mission_name, email, phone, address, hours, source_url").order("country");
-        return json({ consulates: data ?? [], help: PASSPORT_HELP });
+        return json({ consulates: data ?? [], help: passportHelp(url.searchParams.get("lang")) });
       }
       if ((m = path.match(/^\/consulates\/([A-Za-z]{2})$/))) return json(await consulateFor(m[1]));
       if ((m = path.match(/^\/pickup\/([\w-]+)\/delega\.pdf$/))) return await delegaPdf(m[1], url);
