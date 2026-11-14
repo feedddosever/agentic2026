@@ -1,0 +1,81 @@
+publiccodeYmlVersion: "0.4"
+
+name: Ritrovo
+url: "https://github.com/feedddosever/agentic2026"
+landingURL: "https://screenshot-to-spark-3870.lovable.app"
+softwareVersion: "0.1.0"
+releaseDate: "2026-11-14"
+platforms:
+  - web
+categories:
+  - customer-service-and-support
+  - digital-citizenship
+  - inventory-management
+developmentStatus: development
+softwareType: "standalone/web"
+
+description:
+  it:
+    shortDescription: >-
+      Catalogo ricercabile degli oggetti rinvenuti di Roma e agente che li restituisce ai proprietari.
+    longDescription: >
+      Ritrovo decodifica gli elenchi PDF degli oggetti rinvenuti pubblicati da Roma Capitale (testo non
+      ricercabile) e li trasforma in un catalogo pubblico ricercabile in sei lingue, con i numeri dei documenti
+      oscurati come nell'elenco ufficiale. Per il Reparto Oggetti Rinvenuti offre l'inserimento rapido da foto e
+      nota dettata, un agente che propone il canale di restituzione (consolato per i documenti esteri, bozza di
+      notifica App IO per quelli italiani, avvisi dei cittadini) e la verifica di proprietà con dettagli mai
+      pubblicati. I cittadini e i turisti possono parlare con un assistente vocale in 20 lingue, preparare il
+      ritiro con delega e diritti da pagare, e verificare l'autenticità dei messaggi. Prototipo dell'Agentic Hack
+      Rome 2026, sfida 03: non è un servizio ufficiale di Roma Capitale.
+    features:
+      - Catalogo ricercabile dagli elenchi ufficiali, anche in inglese, spagnolo, francese, tedesco e cinese
+      - Inserimento dei reperti da foto e nota con proposta dell'IA e conferma dell'operatore
+      - Agente di restituzione con regole fisse (consolati, bozze App IO, avvisi)
+      - Verifica di proprietà con dettagli non pubblicati
+      - Assistente vocale in 20 lingue
+      - Pacchetto ritiro con delega precompilata e calcolo dei diritti
+      - Registro di custodia e firme verificabili su Avalanche
+  en:
+    shortDescription: >-
+      Searchable catalogue of Rome's found objects and an agent that returns them to their owners.
+    longDescription: >
+      Ritrovo decodes the PDF lists of found objects published by Roma Capitale (whose text cannot be searched)
+      into a public catalogue searchable in six languages, with document numbers masked as in the official list.
+      For the lost-and-found office it adds quick intake from a photo and a dictated note, an agent that proposes
+      how to return each item (consulate for foreign documents, an App IO notice draft for Italian ones, citizens'
+      alerts) and ownership checks based on details that are never published. Citizens and tourists can talk to a
+      voice assistant in 20 languages, prepare the pickup with a delegation form and the fees due, and check that a
+      message really comes from Ritrovo. Prototype from Agentic Hack Rome 2026, challenge 03: not an official Roma
+      Capitale service.
+    features:
+      - Catalogue built from the official lists, searchable in English, Spanish, French, German and Chinese too
+      - Intake from a photo and a note, proposed by AI and confirmed by the operator
+      - Return agent checked by fixed rules (consulates, App IO drafts, alerts)
+      - Ownership checks with details that are never published
+      - Voice assistant in 20 languages
+      - Pickup pack with a pre-filled delegation form and fees
+      - Custody log and verifiable signatures on Avalanche
+
+legal:
+  license: EUPL-1.2
+
+maintenance:
+  type: "none"
+
+localisation:
+  localisationReady: true
+  availableLanguages:
+    - it
+    - en
+    - es
+    - fr
+    - de
+    - zh
+
+dependsOn:
+  open:
+    - name: PostgreSQL
+  proprietary:
+    - name: Anthropic Claude API
+    - name: ElevenLabs Agents
+    - name: Exa API

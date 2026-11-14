@@ -342,3 +342,7 @@ Choices and why:
   (5) App IO stated as not integrated (docs, routing reason, outbox label, About page). (8) Translated object
   names, 92% coverage on a random sample. (9) Passport help: emergency travel document from the consulate, police
   report, consulate contacts (find_consulate voice tool; Exa for missing countries). Lovable prompt 16.
+- [21] Repo preparation: EUPL-1.2 LICENSE (official text), publiccode.yml (Developers Italia standard), open data in
+  data/open (catalogue CSV/JSON with schema, translated object names, list fingerprints with anchor txs; CC BY 4.0,
+  source Roma Capitale, art. 52 CAD), docs/FAQ.md (App IO, phone, ownership, eIDAS vs blockchain, data location),
+  a "For the jury" block at the top of the README. Secret scan of tree and history: clean.

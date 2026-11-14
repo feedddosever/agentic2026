@@ -2,6 +2,20 @@
 
 **Agentic Hack Rome 2026 · Challenge 03 "Oggetti smarriti"**
 
+> **For the jury**
+> - **Live app:** https://screenshot-to-spark-3870.lovable.app (operator console: `/operator`)
+> - **Try it:** search "wallet", "Reisepass" or "钱包"; open an item (e.g. `/item/2025-255`) to see the translated
+>   names, the ownership check and the proof that the record is in the city's list; talk to the assistant in your
+>   language (20 languages, it switches automatically).
+> - **Onchain (Avalanche Fuji):** the agent's public track record, live from ERC-8004:
+>   [`/agent/track-record`](https://izrggntqsssfzazjfhht.supabase.co/functions/v1/api/agent/track-record);
+>   a record's proof of publication:
+>   [`/items/2025-255/proof`](https://izrggntqsssfzazjfhht.supabase.co/functions/v1/api/items/2025-255/proof).
+> - **Open data:** [`data/open/`](data/open) (CSV/JSON, CC BY 4.0) · **Licence:** EUPL-1.2 · [`publiccode.yml`](publiccode.yml)
+> - **Read next:** [Architecture](docs/ARCHITECTURE.md) · [FAQ](docs/FAQ.md) · [Demo script](docs/DEMO.md) ·
+>   [Build plan and change log](docs/PLAN.md)
+> - Prototype in demo mode: nothing is sent to real consulates, citizens or the office. App IO is not integrated.
+
 Rome's lost-and-found office (Reparto Oggetti Rinvenuti, Polizia Locale di Roma Capitale) logs about
 **600 found objects a month** and publishes them as yearly PDF lists of **500–700 pages**. The PDFs use fonts with
 no text map: search, copy-paste and screen readers return gibberish. To know whether your passport was handed in,
