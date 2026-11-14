@@ -183,7 +183,7 @@ export async function setupVoiceAgent(apiBase: string, existingAgentId?: string 
       conversation: { max_duration_seconds: 600 },
     },
     platform_settings: {
-      widget: { language_selector: true },
+      widget: { language_selector: false }, // one control: the site's language menu (and automatic detection)
       // Let the website open the call in the page's language.
       overrides: { conversation_config_override: { agent: { language: true, first_message: true } } },
       data_collection: {
