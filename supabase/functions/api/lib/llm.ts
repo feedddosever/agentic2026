@@ -119,6 +119,33 @@ export async function translateLabels(labels: string[]): Promise<{ it: string; e
   return (JSON.parse(text) as { items: { it: string; en: string; es: string; fr: string; de: string; zh: string }[] }).items;
 }
 
+const QUERY_SCHEMA = {
+  type: "object", additionalProperties: false, required: ["terms"],
+  properties: { terms: { type: "array", items: { type: "string" } } },
+};
+
+/** A search typed in any language -> the Italian words Rome's lost-and-found register uses (fast model). */
+export async function translateQuery(q: string): Promise<string[]> {
+  if (!client) return [];
+  const ask = (model: string) => client!.beta.messages.create({
+    model, max_tokens: 400, ...FALLBACK,
+    output_config: { effort: "low", format: { type: "json_schema", schema: QUERY_SCHEMA } },
+    messages: [{
+      role: "user",
+      content: "Someone searched Rome's lost-and-found register, which lists objects in Italian (e.g. PORTAFOGLI, " +
+        "ZAINO, BORSA, CHIAVI, PASSAPORTO, TELEFONO CELLULARE, OCCHIALE DA SOLE, OMBRELLO, TROLLEY/VALIGIA, CARTA DI " +
+        "CREDITO, PATENTE DI GUIDA, CARTA IDENTITA'). Translate their search into the 1-4 Italian words the register " +
+        "would use: the object type, plus a colour or brand if they gave one. Lower case, no articles.\n\nSearch: " +
+        JSON.stringify(q.slice(0, 200)),
+    }],
+  });
+  let res;
+  try { res = await ask(Deno.env.get("CLAUDE_FAST_MODEL") ?? "claude-haiku-5-5"); } catch { res = await ask(MODEL); }
+  const text = res.content.find((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")?.text;
+  if (!text) return [];
+  return ((JSON.parse(text) as { terms: string[] }).terms ?? []).map((t) => t.toLowerCase().trim()).filter((t) => t && t.length <= 40).slice(0, 4);
+}
+
 export async function runToolLoop(opts: { system: string; user: string; tools: ToolSpec[]; maxTurns?: number; stopAfter?: string }): Promise<{ text: string; steps: Step[]; model: string } | null> {
   if (!client) return null;
   const tools: Anthropic.Beta.BetaTool[] = opts.tools.map((t) => ({

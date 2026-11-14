@@ -107,3 +107,14 @@ export function expandQuery(q: string): { q: string; added: string[] } {
   for (const w of [...added]) if (allTokens.includes(w)) added.delete(w);
   return added.size ? { q: `${q} ${[...added].join(" ")}`, added: [...added] } : { q, added: [] };
 }
+
+/** True when the query has words the register and the glossary can't place (another language, or a typo):
+ * then the API asks Claude for the register's terms. */
+export function needsTranslation(q: string): boolean {
+  if (!cache) return false;
+  // Only called when the glossary found nothing: any non-Latin script then needs translating (Cyrillic, Arabic,
+  // Greek, Hangul, Japanese, and Chinese words the glossary doesn't have).
+  if (/[^\p{Script=Latin}\p{N}\p{P}\p{Z}\p{S}]/u.test(q)) return true;
+  const tokens = norm(q).split(/[^a-z0-9]+/).filter((t) => t.length >= 3);
+  return tokens.length > 0 && tokens.some((t) => !cache!.itVocab.has(t));
+}

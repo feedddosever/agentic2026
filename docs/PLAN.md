@@ -355,3 +355,8 @@ Choices and why:
   alert match (email draft + voice note) and return closing the alert, two simultaneous intakes (all 8 txs
   confirmed), no page errors, no horizontal overflow on a phone. 15 rule tests, 25 smoke checks. Optional Lovable
   prompt 17 for four small interface issues.
+- [23] Builder's catch: website search in Russian found nothing (the glossary covered en/es/fr/de/zh and the
+  tokenizer dropped Cyrillic). Searches the glossary can't place (any other script, or unknown words) are now turned
+  into the register's terms by a fast Claude call, cached per query (migration 0011) and mapped to the register's
+  forms; a query with nothing searchable returns no results instead of everything. Tested: Russian, Portuguese,
+  Polish, Arabic, Japanese, Korean, Chinese, English, Italian, prefix.

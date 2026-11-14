@@ -10,9 +10,9 @@ import { fillDelega } from "./lib/delega.ts";
 import { intake, previewIntake, route, secretHash, markReturned, flushCustody, alertMatches, scanAlerts, outboxPayload, maskContact, type Ctx } from "./lib/engine.ts";
 import { chainInfo, explorerTx, recoverSigner, hashJson, agentBalance, agentAddress, anchorDataset, AGENT_ID, IDENTITY_REGISTRY, trackRecord, anchoredList, canonical, officeAddress } from "./lib/chain.ts";
 import { recordLeaf, foldProof, toHex, HOW_TO_VERIFY } from "./lib/proof.ts";
-import { ensureTerms, translateObject, expandQuery } from "./lib/terms.ts";
+import { ensureTerms, translateObject, expandQuery, needsTranslation } from "./lib/terms.ts";
 import { exaEnabled, otherOffices, findMission } from "./lib/exa.ts";
-import { llmEnabled, MODEL, translateLabels } from "./lib/llm.ts";
+import { llmEnabled, MODEL, translateLabels, translateQuery } from "./lib/llm.ts";
 import { countryByCode, detectCountry, COUNTRIES } from "./lib/countries.ts";
 import { setupVoiceAgent, recentCalls, voiceEnabled, tts, stt, agentConfigSummary, AGENT_ID as VOICE_AGENT_ID } from "./lib/voice.ts";
 
@@ -94,6 +94,24 @@ async function toolSearch(b: Record<string, unknown>) {
   const lang = typeof b.lang === "string" ? b.lang.slice(0, 2) : typeof b.language === "string" ? b.language.slice(0, 2) : undefined;
   const raw = typeof b.query === "string" && b.query.trim() ? b.query.trim().slice(0, 200) : null;
   const expanded = raw ? expandQuery(raw) : { q: null as string | null, added: [] as string[] };
+  // Any other language (Russian, Polish, Arabic, Japanese...): Claude gives the register's terms, cached per query.
+  if (raw && !expanded.added.length && llmEnabled() && needsTranslation(raw)) {
+    const key = raw.toLowerCase().replace(/\s+/g, " ").slice(0, 200);
+    const { data: hit } = await db.from("query_translations").select("terms").eq("q", key).maybeSingle();
+    let terms = (hit?.terms as string[] | undefined) ?? null;
+    if (!terms) {
+      terms = await Promise.race([translateQuery(raw), new Promise<string[]>((r) => setTimeout(() => r([]), 8000))]).catch(() => []);
+      if (terms.length) await db.from("query_translations").upsert({ q: key, terms });
+    }
+    // Map the answer to the register's own forms too ("portafoglio" -> PORTAFOGLI).
+    const base = terms.flatMap((t) => t.split(/[^\p{L}\p{N}']+/u)).filter((w) => w.length >= 3);
+    const words = [...new Set([...base, ...expandQuery(base.join(" ")).added])];
+    if (words.length) { expanded.q = `${raw} ${words.join(" ")}`; expanded.added = words; }
+  }
+  // A query with nothing searchable left (e.g. only characters we couldn't translate) finds nothing, not everything.
+  if (raw && !(expanded.q ?? "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().split(/[^a-z0-9]+/).some((w) => w.length >= 3)) {
+    return json({ total_matches: 0, window: null, results: [], guidance: "Nothing found. Offer to file an alert and suggest other lost-and-found offices." });
+  }
   const { data, error } = await db.rpc("search_items", {
     q: expanded.q,
     p_category: typeof b.category === "string" && b.category ? b.category : null,
