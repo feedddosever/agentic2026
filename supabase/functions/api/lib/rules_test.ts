@@ -126,3 +126,14 @@ Deno.test("cash amounts never reach public text; they become a private ownership
   assert(!JSON.stringify(f.objects).includes("40") && !f.description_en.includes("40"), JSON.stringify(f));
   assertEquals(f.cash_eur, 40);
 });
+
+import { pdfSafe, fillDelega } from "./delega.ts";
+Deno.test("delega accepts names in any script (transliterated for the PDF font)", async () => {
+  assertEquals(pdfSafe("Иван Петров"), "Ivan Petrov");
+  assertEquals(pdfSafe("Nguyễn Văn An"), "Nguyen Van An");
+  assertEquals(pdfSafe("Zoë Ångström"), "Zoë Ångström");
+  for (const owner of ["李雷", "محمد علي", "Иван Петров", "Nguyễn Văn An"]) {
+    const bytes = await fillDelega({ reperto: "255 of 2025", owner, delegate: "Anna Rossi" });
+    assert(bytes.length > 1000, owner);
+  }
+});

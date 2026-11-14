@@ -423,3 +423,16 @@ POST {API}/tools/search gets "lang" in the body; GET {API}/items/{id}?lang=..; G
 5. About page: add one honest line: "App IO is not integrated yet: for Italian documents Ritrovo drafts the App IO
    notice for the office to send."
 ```
+
+## Prompt 17 (optional): small fixes from the product QA
+
+```
+Four small fixes:
+1. Operator sign-in: when the API answers 401, show "That token is not valid" under the field (today nothing
+   happens, so the operator can't tell why).
+2. Pickup page: show "Where and when" first; move the passport card ("Need to travel before you get your passport
+   back?") just after it.
+3. Search results: when there are more than 50 matches and no date was given, show a hint above the list: "Add the
+   date you lost it to narrow down the results" (translated), with the date field focused on click.
+4. Delega form: under the two name fields, small text: "Write the names as on the passport (Latin letters)."
+```

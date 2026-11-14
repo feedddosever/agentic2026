@@ -346,3 +346,12 @@ Choices and why:
   data/open (catalogue CSV/JSON with schema, translated object names, list fingerprints with anchor txs; CC BY 4.0,
   source Roma Capitale, art. 52 CAD), docs/FAQ.md (App IO, phone, ownership, eIDAS vs blockchain, data location),
   a "For the jury" block at the top of the README. Secret scan of tree and history: clean.
+- [22] Product QA pass (browser, desktop and phone, every citizen and operator journey; API edge cases). Fixed: the
+  delega PDF crashed (500) for names in Chinese, Cyrillic, Arabic or Vietnamese: non-Latin-1 characters are now
+  transliterated (any-ascii), as on a passport's machine-readable page; a search with an impossible date
+  ("2026-13-45") crashed (500): dates are validated; operator-only GET routes answered 404 without a token, now
+  401; fees for a pickup date before the item arrived are clamped; photo intake's description could carry
+  "two 20-euro banknotes": the money filter catches hyphenated and counted amounts. Verified: photo + note intake,
+  alert match (email draft + voice note) and return closing the alert, two simultaneous intakes (all 8 txs
+  confirmed), no page errors, no horizontal overflow on a phone. 15 rule tests, 25 smoke checks. Optional Lovable
+  prompt 17 for four small interface issues.

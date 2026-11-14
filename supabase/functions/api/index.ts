@@ -42,7 +42,12 @@ type Item = {
   status: string; prefixes?: string[]; prefix_match?: boolean; total_count?: number;
 };
 
-const isoDate = (s: unknown): string | null => (typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null);
+// A real calendar date (YYYY-MM-DD), else null: "2026-13-45" must not crash a search.
+const isoDate = (s: unknown): string | null => {
+  if (typeof s !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const d = new Date(s + "T00:00:00Z");
+  return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s ? s : null;
+};
 const addDays = (iso: string, n: number) => {
   const d = new Date(iso + "T00:00:00Z");
   d.setUTCDate(d.getUTCDate() + n);
@@ -256,7 +261,8 @@ async function validationRecord(itemId: string) {
 async function toolFees(b: Record<string, unknown>) {
   const item = await getItem(String(b.item_id ?? ""));
   if (!item) return bad("unknown item", 404);
-  const pickup = isoDate(b.pickup_date) ?? today();
+  // Never earlier than the day the office received the item.
+  const pickup = [isoDate(b.pickup_date) ?? today(), item.date_acquired].sort()[1];
   const fees = computeFees(item.objects, item.date_acquired, new Date(pickup + "T12:00:00Z"), b.requester === "embassy" ? "embassy" : "owner");
   return json({ item_id: item.id, pickup_date: pickup, ...fees, office_hours: OFFICE.hours.en });
 }
@@ -584,7 +590,10 @@ Deno.serve(async (req) => {
       if ((m = path.match(/^\/consulates\/([A-Za-z]{2})$/))) return json(await consulateFor(m[1]));
       if ((m = path.match(/^\/pickup\/([\w-]+)\/delega\.pdf$/))) return await delegaPdf(m[1], url);
       if ((m = path.match(/^\/pickup\/([\w-]+)$/))) return await pickupPage(m[1], url);
-      if (!isOperator) return bad(`no route for GET ${path} (or operator token required)`, 404);
+      if (!isOperator) {
+        const operatorOnly = /^\/(admin|queue|outbox|alerts|embassies)(\/|$)|^\/items\/[\w-]+\/trace$/.test(path);
+        return operatorOnly ? bad("operator token required", 401) : bad(`no route for GET ${path}`, 404);
+      }
       if ((m = path.match(/^\/items\/([\w-]+)\/trace$/))) {
         const { data } = await db.from("agent_runs").select("kind, mode, model, steps, result, error, created_at").eq("item_id", m[1]).order("created_at");
         return json(data ?? []);
