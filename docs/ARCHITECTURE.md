@@ -55,11 +55,14 @@ record was in the city's list at the anchoring time (relevant to the one-year te
   deterministically; the agent adds judgement (borderline alert matches, wording, language, consulate research).
 - **No embeddings.** The catalogue vocabulary is small and Italian; the agent translates the caller's words into
   catalogue terms through tool parameters, and Postgres full-text + trigram ranks the results.
-- **Prefix to find, last four to prove.** The official list shows the first five characters of document numbers
-  and IMEIs, so they are a search key, not proof. At intake the operator holds the document: Ritrovo keeps a salted
-  hash of its last four characters (`item_secrets`, service role only; the number is never stored). A caller who
-  says them is the owner; wrong attempts are limited to 5 an hour per item (`verify_attempts`). Records from the
-  old PDFs have no secret, so the office checks the ID at the counter.
+- **Public details find, private details prove.** The official list shows the first five characters of document
+  numbers and IMEIs, so they are a search key, never proof (the item page shows them anyway). At intake the
+  operator holds the object, so Ritrovo keeps salted hashes of details that are never published: the last four
+  characters of each number and the cash amount (`item_secrets`, service role only). Public records mirror the
+  official list: "DENARO EURO" with no amount, no raw operator note, amounts removed from descriptions, and the
+  onchain evidence hash salted so the amount can't be brute-forced. `/tools/verify` asks only the strongest
+  question the record supports (last four, else cash), with 5 wrong tries an hour per item. Records from the old
+  PDFs have no private details, so the office checks the ID at the counter, and the app says so.
 - **Fast enough to demo live.** The return agent gets the consulate contact and alert matches in its first message
   (they are always needed), drafts and finishes in one turn, and the loop stops after `finish`. Avalanche txs are
   sent without waiting for the receipt (a nonce manager keeps them in order). Intake to routed: ~12 s, was ~31 s.

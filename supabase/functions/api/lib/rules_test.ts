@@ -12,7 +12,7 @@ Deno.test("parses an Italian operator note with a foreign passport and cash", ()
   const f = parseNote("Portafoglio nero con passaporto americano EL6551234 e 40 euro, consegnato da ATAC", "Termini");
   assert(f.objects.includes("PORTAFOGLI"));
   assert(f.objects.some((o) => o.startsWith("PASSAPORTO ESTERO - Nr: EL655* * * *")));
-  assert(f.objects.some((o) => o.startsWith("DENARO EURO 40")));
+  assert(f.objects.includes("DENARO EURO"), "money is listed without its amount, as in the official list");
   assertEquals(f.nationality, "US");
   assertEquals(f.colour, "NERO");
   assertEquals(f.finder_channel, "ATAC");
@@ -109,4 +109,18 @@ Deno.test("record proofs match the Python tree builder (pipeline/load_supabase.p
   assert(toHex(await foldProof(await recordLeaf({ ...r0, objects: ["PORTAFOGLI"] }), [
     "0x3a9f43fc920a50c157028eee99e53c125171e6d22307a349530943b59e3e806f",
     "0x45cb0e696ee5f8ff7b3de7e8c39aad917e749f02a630e5c76de9f7d2961cdcd5"])) !== root);
+});
+
+import { maskMoney, stripCashAmount, cashKey } from "./rules.ts";
+Deno.test("cash amounts never reach public text; they become a private ownership question", () => {
+  assertEquals(stripCashAmount("DENARO EURO 40"), "DENARO EURO");
+  assertEquals(stripCashAmount("DENARO DOLLARO STATUNITENSE 120.50"), "DENARO DOLLARO STATUNITENSE");
+  assertEquals(stripCashAmount("PORTAFOGLI"), "PORTAFOGLI");
+  assertEquals(maskMoney("A black wallet with a US passport and 40 euros in cash."), "A black wallet with a US passport and cash.");
+  assertEquals(maskMoney("Wallet with €35 and a card"), "Wallet with cash and a card");
+  assert(!/\d/.test(maskMoney("200 dollars and 20 euro")));
+  assertEquals(cashKey("40"), "40"); assertEquals(cashKey("40,50 €"), "40.5"); assertEquals(cashKey(""), null); assertEquals(cashKey(-1), null);
+  const f = parseNote("Portafoglio con 40 euro e passaporto americano ZR4827316");
+  assert(!JSON.stringify(f.objects).includes("40") && !f.description_en.includes("40"), JSON.stringify(f));
+  assertEquals(f.cash_eur, 40);
 });

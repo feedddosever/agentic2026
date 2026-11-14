@@ -1,7 +1,7 @@
 // Return engine: intake → understand → custody → route (agent + policy guard) → signed outbox → alerts.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2.49.4";
 import { understandIntake, runToolLoop, llmEnabled, MODEL, type ToolSpec, type Step } from "./llm.ts";
-import { parseNote, maskNumber, maskIds, idTokens, secretSuffix, requiredChannels, templateAppIo, templateEmbassy, templateAlertMatch, type ItemForRouting } from "./rules.ts";
+import { parseNote, maskNumber, maskIds, maskMoney, stripCashAmount, cashKey, idTokens, secretSuffix, requiredChannels, templateAppIo, templateEmbassy, templateAlertMatch, type ItemForRouting } from "./rules.ts";
 import { countryByCode } from "./countries.ts";
 import { exaEnabled, findMission } from "./exa.ts";
 import { signPayload, writeCustody, hashJson, explorerTx, validateDecision, giveReturnFeedback, type CustodyEvent } from "./chain.ts";
@@ -122,7 +122,10 @@ export async function previewIntake(input: IntakeInput) {
       if (r) { f = { ...r.fields, objects: r.fields.objects.map((o) => normObject(maskFreeText(o))).filter(Boolean), description_en: maskFreeText(r.fields.description_en) }; mode = "llm"; model = r.model; }
     } catch (e) { error = String((e as Error).message ?? e).slice(0, 300); }
   }
-  const objects = f.objects.length ? f.objects : ["ALTRO (Oggettistica)"];
+  // Show the operator the record exactly as it will be published: money without its amount (that stays in
+  // the Cash field, which becomes a private ownership question).
+  const objects = f.objects.length ? f.objects.map(stripCashAmount) : ["ALTRO (Oggettistica)"];
+  f.description_en = maskMoney(f.description_en ?? "");
   return {
     fields: { ...f, objects, nationality: /^[A-Z]{2}$/.test(f.nationality ?? "") ? f.nationality : "" },
     derived: { id_doc: idDocKind(objects), prefixes: prefixesOf(objects), categories: [...new Set(objects.map(categorize))].sort() },
@@ -175,25 +178,30 @@ export async function intake(ctx: Ctx, input: IntakeInput) {
     photo_path = `${id}.jpg`;
     await ctx.db.storage.from("intake").upload(photo_path, bytes, { contentType: input.media_type ?? "image/jpeg", upsert: true });
   }
-  if (f.cash_eur >= 0 && !f.objects.some((o) => o.startsWith("DENARO"))) f.objects.push(`DENARO EURO ${f.cash_eur}`);
-  const objects = f.objects.slice(0, 20);
-  const evidence = hashJson({ id, date: today, objects, colour: f.colour, brand: f.brand, cash_eur: f.cash_eur, photo_sha256 });
+  if (f.cash_eur > 0 && !f.objects.some((o) => o.startsWith("DENARO"))) f.objects.push("DENARO EURO");
+  const objects = f.objects.map(stripCashAmount).slice(0, 20);
+  const cash = cashKey(f.cash_eur);
+  const cashHash = cash ? await secretHash(id, `cash:${cash}`) : null;
+  // Salted: the cash amount must not be recoverable from this public hash.
+  const evidence = hashJson({ id, date: today, objects, colour: f.colour, brand: f.brand, cash: cashHash, photo_sha256 });
   const nationality = /^[A-Z]{2}$/.test(f.nationality ?? "") ? f.nationality : null;
   const row = {
     id, source: "intake", date_acquired: today, objects, categories: [...new Set(objects.map(categorize))].sort(),
     id_doc: idDocKind(objects), prefixes: prefixesOf(objects), colour: f.colour || null, brand: f.brand || null,
     found_where: f.found_where || null, finder_channel: f.finder_channel || null, nationality, photo_path,
-    intake_note: note || null, evidence_hash: evidence, description_en: maskFreeText(f.description_en || "") || null,
+    // The operator's note stays in the operator-only agent trace, never in the public record.
+    intake_note: null, evidence_hash: evidence, description_en: maskMoney(maskFreeText(f.description_en || "")) || null,
   };
   const { error } = await ctx.db.from("items").insert(row);
   if (error) throw new Error(error.message);
   // Ownership secrets: the public list shows only the first five characters, so we keep a salted hash of the last
   // four of each number the operator read from the document. The numbers themselves are never stored.
   if (ITEM_SALT) {
-    const secrets = (await Promise.all([...new Set(idTokens(rawNote))].map(async (t) => {
+    const secrets: Record<string, unknown>[] = (await Promise.all([...new Set(idTokens(rawNote))].map(async (t) => {
       const last4 = secretSuffix(t);
-      return last4 ? { item_id: id, prefix: t.slice(0, 5), suffix_hash: await secretHash(id, last4) } : null;
-    }))).filter(Boolean);
+      return last4 ? { item_id: id, kind: "last4", prefix: t.slice(0, 5), suffix_hash: await secretHash(id, last4) } : null;
+    }))).filter((x): x is NonNullable<typeof x> => !!x);
+    if (cashHash) secrets.push({ item_id: id, kind: "cash", prefix: null, suffix_hash: cashHash });
     if (secrets.length) await ctx.db.from("item_secrets").insert(secrets);
   }
   await ctx.db.from("agent_runs").insert({ item_id: id, kind: "intake", mode, model, steps, result: f, error: llmError });

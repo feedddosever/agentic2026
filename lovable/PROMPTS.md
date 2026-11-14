@@ -359,3 +359,24 @@ Two new public cards. Both read the API (no auth).
    - If verified is false but in_official_list is true: amber "Proof could not be checked right now".
 Load both cards lazily (they call the chain) with a small skeleton; never block the rest of the page.
 ```
+
+## Prompt 14: "Is it yours?" asks only what isn't public
+
+```
+On the item page, the "Is it yours?" card must no longer ask for the first characters of the number: they are
+printed on the same page (and in the official list), so typing them proves nothing. Replace the card's logic:
+1. When the item page loads, call POST {API}/tools/verify with { item_id } only. The response has
+   "questions" (an array: [] or ["last4"] or ["cash"]), "ownership" and "note".
+2. If questions is ["last4"]: one field "Last 4 characters of the document number or IMEI" (maxLength 4,
+   uppercase letters and digits) and a "Check" button → POST { item_id, last4 }.
+   If questions is ["cash"]: one field "How much cash was inside? (€)" (numeric) and "Check" → POST { item_id, cash }.
+   Under the field, small text: "The first characters are public in the official list. This detail was recorded at
+   the counter and is never shown, so only the owner knows it."
+3. If questions is []: no field. Show a neutral note: "This record comes from the official list. The office
+   checks ownership at the counter: bring an ID, and for documents they compare the full number." plus the
+   "Get my pickup pack" button.
+4. Result states stay as in prompt 12 (verified → green "It's yours. Bring an ID and quote {item id}" with the pickup
+   pack button; failed → amber; locked → grey). Show the response "note" under the result.
+Keep the prefix search on the home page as it is: there the first characters are used to FIND the item.
+Never store or log what the user types.
+```

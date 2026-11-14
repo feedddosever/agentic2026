@@ -65,6 +65,22 @@ const ID_LIKE = /\b(?=(?:[A-Z]*\d){3})[A-Z0-9]{6,24}\b/gi;
 const PROTECT = /https?:\/\/\S+|\bIN-\d{6}-[A-Z0-9]{4}\b|\{VERIFY_URL\}/gi;
 
 /** Mask every identifier-like token in free text (operator notes, model output, message bodies). */
+// Cash amounts are an ownership secret: the official list writes "DENARO EURO" with no amount, and the office asks
+// the claimant how much was inside. Public text never carries an amount.
+const MONEY = /(?:€|\$|£)\s*\d+(?:[.,]\d{1,2})?|\b\d+(?:[.,]\d{1,2})?\s*(?:€|euros?|eur|dollars?|dollari|usd|pounds?|sterline|gbp)\b/gi;
+export function maskMoney(s: string): string {
+  return s.replace(MONEY, "cash").replace(/\bcash(\s+in)?\s+cash\b/gi, "cash");
+}
+/** "DENARO EURO 40" -> "DENARO EURO" (any money object loses its amount). */
+export function stripCashAmount(o: string): string {
+  return o.startsWith("DENARO") ? o.replace(/\s*[-:]?\s*\d[\d.,]*\s*$/, "").replace(/\s+\d[\d.,]*(?=\s)/g, "").trim() : o;
+}
+/** Canonical form of a stated cash amount for hashing: "40", "40,50" -> "40.5". */
+export function cashKey(v: unknown): string | null {
+  const n = typeof v === "number" ? v : Number(String(v ?? "").replace(",", ".").replace(/[^\d.-]/g, ""));
+  return Number.isFinite(n) && n > 0 ? String(Math.round(n * 100) / 100) : null;
+}
+
 /** Full ID-like numbers in a raw note. Used only to derive salted ownership checks; never stored or logged. */
 export function idTokens(s: string): string[] {
   return [...s.replace(PROTECT, " ").matchAll(ID_LIKE)].map((m) => m[0].toUpperCase());
@@ -101,7 +117,7 @@ export function parseNote(note: string, foundWhere = "", finderChannel = ""): In
     objects.push(line);
   }
   const cash = note.match(/(\d+(?:[.,]\d{1,2})?)\s*(€|euro|eur)\b/i) ?? note.match(/€\s*(\d+(?:[.,]\d{1,2})?)/);
-  if (cash && !objects.some((o) => o.startsWith("DENARO"))) objects.push(`DENARO EURO ${cash[1].replace(",", ".")}`);
+  if (cash && !objects.some((o) => o.startsWith("DENARO"))) objects.push("DENARO EURO");
   const brand = BRANDS.find((b) => text.toLowerCase().includes(b)) ?? "";
   return {
     objects: objects.length ? objects : ["ALTRO (Oggettistica)"],
@@ -111,7 +127,7 @@ export function parseNote(note: string, foundWhere = "", finderChannel = ""): In
     found_where: foundWhere || (note.match(/\b(?:a|at|in|presso|near)\s+([A-Z][\w' ]{2,40})/)?.[1] ?? ""),
     finder_channel: finderChannel || CHANNELS.find(([re]) => re.test(note))?.[1] || "",
     cash_eur: cash ? Number(cash[1].replace(",", ".")) : -1,
-    description_en: maskIds(note).slice(0, 300),
+    description_en: maskMoney(maskIds(note)).slice(0, 300),
   };
 }
 

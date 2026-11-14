@@ -320,3 +320,10 @@ Choices and why:
   import stores them for new lists); /items/:id/proof checks them against the DatasetAnchored event read from
   Avalanche. CustodyLog source verified on the explorer. Lovable prompt 13 shows the track record and the proof.
   13 rule tests, 23 smoke checks pass; all new txs confirmed on Fuji.
+- [18] Builder's catch: the item page showed "ZR482* * * *" and then asked the user to type the same five
+  characters. Ownership now uses only details that are never published: the last four characters (existing) and
+  the cash amount (new; the official list never shows amounts, and it's what a counter clerk asks). Only the
+  strongest question is asked (last four, else cash). While fixing it, three leaks closed: intakes published the
+  cash amount in objects and descriptions, kept the raw operator note in the public record, and the onchain
+  evidence hash included the amount unsalted. Migration 0008; voice agent tool and prompt updated (tested by
+  call); Lovable prompt 14. 14 rule tests, 23 smoke checks pass.

@@ -24,9 +24,10 @@ Timings measured on the live system: AI proposal ~6 s, confirm + routing + both 
 | 2:40 | Home | "When the city publishes a new list, Ritrovo imports it overnight and alerts people who were looking. Ritrovo stops waiting to be searched, and starts returning. Open source, live today." |
 
 ## Likely questions
-- **The first five characters are public, so how is that proof?** It isn't, and we don't treat it as proof. At
-  intake we keep a salted hash of the last four characters (never the number); the caller must say them, with 5
-  tries an hour. Records from the old PDF only have the prefix, so there the office checks the ID at the counter.
+- **The first five characters are public, so how is that proof?** It isn't, and we don't treat it as proof: they
+  only find the item. At intake we keep salted hashes of details that are never published (the last four
+  characters, the cash amount, which the official list never shows either); the owner must say one, with 5 tries
+  an hour. Records from the old PDFs have no private details, so there the office checks the ID at the counter.
 - **Privacy / GDPR?** Only what the city already publishes; full numbers are masked before storage or AI; contacts
   behind RLS; the chain stores salted hashes only.
 - **Is App IO real?** Drafted in the outbox. Rome already sends App IO notices; the real integration is App IO's

@@ -5,6 +5,7 @@
 //           /alerts/match, /chain/flush, /admin/status, /admin/embassy
 import { createClient } from "npm:@supabase/supabase-js@2.49.4";
 import { OFFICE, computeFees, claimHorizon, documentsToBring, romeDate } from "./lib/office.ts";
+import { cashKey } from "./lib/rules.ts";
 import { fillDelega } from "./lib/delega.ts";
 import { intake, previewIntake, route, secretHash, markReturned, flushCustody, alertMatches, scanAlerts, outboxPayload, maskContact, type Ctx } from "./lib/engine.ts";
 import { chainInfo, explorerTx, recoverSigner, hashJson, agentBalance, agentAddress, anchorDataset, AGENT_ID, IDENTITY_REGISTRY, trackRecord, anchoredList, canonical, officeAddress } from "./lib/chain.ts";
@@ -103,41 +104,55 @@ async function toolSearch(b: Record<string, unknown>) {
   });
 }
 
+/** Ownership check. The first characters of a number are public (they only FIND the item), so proof comes from
+ * details recorded at the counter and never published: the last four characters of the document/IMEI number and
+ * the cash amount. Call with just item_id to learn which questions exist. 5 wrong tries an hour per item. */
 async function toolVerify(b: Record<string, unknown>) {
   const id = String(b.item_id ?? "");
+  if (!id) return bad("item_id required");
   const said = String(b.prefix ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   const last4 = String(b.last4 ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  if (!id || (said.length < 4 && last4.length !== 4)) return bad("item_id and a prefix (4+ characters) or last4 (4 characters) are required");
+  const cash = cashKey(b.cash);
   const item = await getItem(id);
   if (!item) return bad("unknown item", 404);
-  // The first characters are public in the official list: a matching hint, not proof.
-  const hit = said.length >= 4 ? (item.prefixes ?? []).find((p) => p.length >= 4 && (said.startsWith(p) || p.startsWith(said))) : undefined;
-  const { data: secrets } = await db.from("item_secrets").select("suffix_hash").eq("item_id", id);
-  const available = (secrets ?? []).length > 0;
-  let ownership: "verified" | "failed" | "locked" | "not_checked" | "not_available" = available ? "not_checked" : "not_available";
-  if (available && last4.length === 4) {
+  const hit = said.length >= 4 ? (item.prefixes ?? []).some((p) => p.length >= 4 && (said.startsWith(p) || p.startsWith(said))) : null;
+  const { data: secrets } = await db.from("item_secrets").select("kind, suffix_hash").eq("item_id", id);
+  const kinds = [...new Set((secrets ?? []).map((s) => s.kind as string))].sort((a, b) => (a === "last4" ? -1 : b === "last4" ? 1 : 0));
+  const answers: Record<string, string | null> = { last4: last4.length === 4 ? last4 : null, cash: cash ? `cash:${cash}` : null };
+  // Ask only the strongest question the record supports: the last four characters when there is a numbered
+  // document, else the cash amount. A misremembered cash amount must not block an owner who knows the number.
+  const asked = kinds.slice(0, 1);
+  const answered = asked.filter((k) => answers[k]);
+  let ownership: "verified" | "failed" | "locked" | "not_checked" | "not_available" = kinds.length ? "not_checked" : "not_available";
+  let verifiedWith: string | null = null;
+  if (answered.length) {
     const since = new Date(Date.now() - 3600_000).toISOString();
     const { count } = await db.from("verify_attempts").select("id", { count: "exact", head: true }).eq("item_id", id).eq("ok", false).gte("created_at", since);
     if ((count ?? 0) >= 5) ownership = "locked";
     else {
-      const h = await secretHash(id, last4);
-      const ok = (secrets ?? []).some((s) => s.suffix_hash === h);
-      await db.from("verify_attempts").insert({ item_id: id, ok });
-      ownership = ok ? "verified" : "failed";
+      const ok: Record<string, boolean> = {};
+      for (const k of answered) {
+        const h = await secretHash(id, answers[k]!);
+        ok[k] = (secrets ?? []).some((s) => s.kind === k && s.suffix_hash === h);
+      }
+      const wrong = answered.some((k) => !ok[k]);
+      if (wrong) ownership = "failed";
+      else { ownership = "verified"; verifiedWith = asked[0]; }
+      await db.from("verify_attempts").insert({ item_id: id, ok: !wrong });
     }
   }
+  const ask = asked.map((k) => (k === "last4" ? "the last four characters of the document number or IMEI" : "exactly how much cash was inside")).join(" and ");
   const note = {
-    verified: "Ownership confirmed: the last four characters match what the office read from the document. The owner still shows an ID at the counter.",
-    failed: "The last four characters do not match. Do not confirm ownership; suggest checking the number, or visiting the office.",
+    verified: `Ownership confirmed with ${verifiedWith === "last4" ? "the last four characters" : "the cash amount"}, which only the owner and the office know. The owner still shows an ID at the counter.`,
+    failed: "That does not match what the office recorded. Do not confirm ownership; suggest checking, or visiting the office.",
     locked: "Too many wrong attempts for this item. Ownership can now only be confirmed at the office.",
-    not_checked: hit
-      ? "The first characters match, but they are public in the official list, so this is only a hint. Ask for the LAST four characters of the same number and call verify_ownership again with last4."
-      : "The first characters do not match this record.",
-    not_available: hit
-      ? "The first characters match the published record. This record comes from the official list, so the office checks the full number against the owner's ID at the counter."
-      : "The first characters do not match this record.",
+    not_checked: `To confirm it is theirs, ask ${ask}, then call verify_ownership again with the answer(s). Never reveal these details yourself.`,
+    not_available: "This record comes from the official list, which has no private details. The office checks the full number or the contents against the owner's ID at the counter.",
   }[ownership];
-  return json({ item_id: id, match: !!hit, ownership, last4_check_available: available, note });
+  return json({
+    item_id: id, ownership, questions: asked, verified_with: verifiedWith, note,
+    match: hit, last4_check_available: kinds.includes("last4"), // kept for older clients
+  });
 }
 
 // ---------- trust: proofs of publication and the agent's onchain track record ----------
