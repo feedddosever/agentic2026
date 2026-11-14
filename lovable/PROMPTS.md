@@ -397,3 +397,29 @@ Never store or log what the user types.
    Portuguese, Chinese, Japanese, Korean, Russian, Ukrainian, Polish, Romanian, Arabic, Dutch, Hindi, Turkish,
    Filipino, Greek and Swedish, and switches automatically when the caller does.
 ```
+
+## Prompt 16: translated object names, passport help, talk or call
+
+```
+Four improvements for tourists. Always send the current UI language code (en, it, es, fr, de, zh):
+POST {API}/tools/search gets "lang" in the body; GET {API}/items/{id}?lang=..; GET {API}/pickup/{id}?lang=..
+
+1. Translated object names. Search results and items now include "objects_translated" (same order as "objects",
+   null where no translation exists) and "summary_translated". When the UI language is not Italian, show the
+   translation as the main text and the official Italian name underneath in small grey text ("Official name:
+   PORTAFOGLI"). Where the translation is null, show the Italian name only. In Italian, show only the Italian names.
+2. Search feedback. If the search response has "also_searched_for" (e.g. ["portafogli"]), show a small line above the
+   results: "Also searched the register for: portafogli". Tourists type in their language; the register is Italian.
+3. Passport help. If a response (search, item or pickup) contains "passport_help" ({ title, text, consulates_url,
+   consulate? }), show a card with the title, the text, and:
+   - if passport_help.consulate is present: its mission_name, address (map link), phone (tel: link), email (mailto:);
+   - otherwise a "Find your embassy or consulate" select filled from GET {API}/consulates (consulates[]: country,
+     mission_name, address, phone, email) that shows the chosen one's details the same way.
+4. Talk or call. On the home page and every item page, show two options side by side:
+   - "Talk to Ritrovo": opens the voice assistant in the browser (the existing widget) with a line "Like any voice
+     assistant, in 20 languages. No phone number needed."
+   - "Prefer a person? Call the office": the phone numbers from GET {API}/config → office.phone as tel: links, and
+     office.hours (Italian hours when the UI is Italian; .en otherwise).
+5. About page: add one honest line: "App IO is not integrated yet: for Italian documents Ritrovo drafts the App IO
+   notice for the office to send."
+```

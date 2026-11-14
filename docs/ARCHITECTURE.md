@@ -44,6 +44,16 @@ every notice the policy requires, minus 50 per notice the policy guard had to ad
 the office wallet records feedback (tag `returned`). `/agent/track-record` reads both summaries from the
 registries. These txs run after the HTTP response (`EdgeRuntime.waitUntil`), so they add no latency.
 
+**Multilingual search and names.** `object_terms` holds translations of the register's 800 most common object
+names (91% of all objects; built once with Claude). `lib/terms.ts` shows them next to the Italian name and turns a
+query in another language into the register's terms (exact translation first, then most words matched, then the
+most common label; brand names are never added; Italian plural/singular variants are mapped). The search index
+splits "TROLLEY/VALIGIA" into two words (migration 0010).
+
+**Passports.** `/tools/consulate`, `/consulates` and `passport_help` in search, item and pickup responses tell a
+tourist that their consulate can issue an emergency travel document; contacts come from the Exa-built directory,
+looked up with Exa on demand for countries not yet cached.
+
 **Proof of publication.** Every official record has a stored Merkle proof (`items.merkle_proof`, made by
 `pipeline/load_supabase.py` and the daily import) against its list's root. `/items/:id/proof` recomputes the leaf
 and root and compares them with the `DatasetAnchored` event read back from Avalanche, so anyone can show that a

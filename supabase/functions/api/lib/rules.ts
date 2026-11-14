@@ -144,7 +144,7 @@ export function requiredChannels(item: ItemForRouting): { required: RequiredChan
   const required: RequiredChannel[] = [];
   let hold: string | null = null;
   if (item.id_doc === "italian" || item.id_doc === "mixed") {
-    required.push({ channel: "app_io", reason: "Italian identity document: the holder can be identified and notified through App IO." });
+    required.push({ channel: "app_io", reason: "Italian identity document: the holder can be identified. Ritrovo drafts the App IO notice for the office (App IO is not integrated yet)." });
   }
   if (item.id_doc === "foreign" || item.id_doc === "mixed") {
     if (item.nationality) {
@@ -165,7 +165,7 @@ const objectsList = (objs: string[]) => objs.map((o) => `• ${o}`).join("\n");
 export function templateAppIo(item: ItemForRouting, pickupUrl: string) {
   return {
     channel: "app_io" as const,
-    recipient_label: "Titolare del documento (notifica App IO)",
+    recipient_label: "Titolare del documento (bozza di notifica App IO: integrazione non ancora attiva)",
     language: "it",
     subject: "Un tuo documento è stato ritrovato",
     body:

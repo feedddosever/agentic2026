@@ -82,6 +82,43 @@ export type ToolSpec = {
 export type Step = { tool: string; input: unknown; output: unknown; ms: number };
 
 /** Manual agentic loop (strict tools, server-side refusal fallback). Returns the final text and the tool trace. */
+const TERMS_SCHEMA = {
+  type: "object", additionalProperties: false, required: ["items"],
+  properties: {
+    items: {
+      type: "array",
+      items: {
+        type: "object", additionalProperties: false, required: ["it", "en", "es", "fr", "de", "zh"],
+        properties: { it: { type: "string" }, en: { type: "string" }, es: { type: "string" }, fr: { type: "string" }, de: { type: "string" }, zh: { type: "string" } },
+      },
+    },
+  },
+};
+
+/** Translate object names from the official Italian register into short labels for tourists. */
+export async function translateLabels(labels: string[]): Promise<{ it: string; en: string; es: string; fr: string; de: string; zh: string }[]> {
+  if (!client) throw new Error("ANTHROPIC_API_KEY not configured");
+  const res = await client.beta.messages.create({
+    model: MODEL, max_tokens: 16000, ...FALLBACK,
+    output_config: { effort: EFFORT, format: { type: "json_schema", schema: TERMS_SCHEMA } },
+    messages: [{
+      role: "user",
+      content:
+        "These are object names from the register of Rome's lost-and-found office (Italian, upper case). Translate each " +
+        "into English (en), Spanish (es), French (fr), German (de) and Simplified Chinese (zh) as a short label a tourist " +
+        "would understand, in sentence case. Keep brand names, bank names and card networks as they are (VISA, APPLE, " +
+        "INTESA SAN PAOLO...). ESTERO/ESTERA = foreign, ITA/ITALIANA = Italian, VARIE/VARI = various, " +
+        "ALTRO (Oggettistica) = Other (objects). Examples: PORTAFOGLI → Wallet; CARTA DI CREDITO ESTERA VISA → Foreign VISA " +
+        "credit card; PATENTE DI GUIDA ESTERA → Foreign driving licence; OCCHIALE DA SOLE → Sunglasses. Return every input " +
+        "label exactly as given in \"it\", in the same order.\n\n" + labels.map((l) => `- ${l}`).join("\n"),
+    }],
+  });
+  if (res.stop_reason === "refusal") throw new Error("refusal");
+  const text = res.content.find((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")?.text;
+  if (!text) throw new Error(`no text output (stop_reason ${res.stop_reason})`);
+  return (JSON.parse(text) as { items: { it: string; en: string; es: string; fr: string; de: string; zh: string }[] }).items;
+}
+
 export async function runToolLoop(opts: { system: string; user: string; tools: ToolSpec[]; maxTurns?: number; stopAfter?: string }): Promise<{ text: string; steps: Step[]; model: string } | null> {
   if (!client) return null;
   const tools: Anthropic.Beta.BetaTool[] = opts.tools.map((t) => ({

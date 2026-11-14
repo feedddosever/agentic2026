@@ -10,9 +10,10 @@ import { fillDelega } from "./lib/delega.ts";
 import { intake, previewIntake, route, secretHash, markReturned, flushCustody, alertMatches, scanAlerts, outboxPayload, maskContact, type Ctx } from "./lib/engine.ts";
 import { chainInfo, explorerTx, recoverSigner, hashJson, agentBalance, agentAddress, anchorDataset, AGENT_ID, IDENTITY_REGISTRY, trackRecord, anchoredList, canonical, officeAddress } from "./lib/chain.ts";
 import { recordLeaf, foldProof, toHex, HOW_TO_VERIFY } from "./lib/proof.ts";
+import { ensureTerms, translateObject, expandQuery } from "./lib/terms.ts";
 import { exaEnabled, otherOffices, findMission } from "./lib/exa.ts";
-import { llmEnabled, MODEL } from "./lib/llm.ts";
-import { countryByCode } from "./lib/countries.ts";
+import { llmEnabled, MODEL, translateLabels } from "./lib/llm.ts";
+import { countryByCode, detectCountry, COUNTRIES } from "./lib/countries.ts";
 import { setupVoiceAgent, recentCalls, voiceEnabled, tts, stt, agentConfigSummary, AGENT_ID as VOICE_AGENT_ID } from "./lib/voice.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -53,13 +54,17 @@ const today = () => romeDate();
 const tidy = (objects: string[]) =>
   objects.map((o) => o.replace(/\s*-\s*Nr:\s*(N\/D|\*[\s*]*)$/i, "").replace(/\s+/g, " ").trim()).filter(Boolean);
 
-function itemCard(i: Item) {
+function itemCard(i: Item, lang?: string) {
   const objs = tidy(i.objects);
+  const tr = lang && lang !== "it" ? objs.map((o) => translateObject(o, lang)) : null;
   return {
     id: i.id,
     found_date: i.date_acquired,
     summary: objs.slice(0, 4).join("; ") + (objs.length > 4 ? `; +${objs.length - 4} more` : ""),
     objects: objs,
+    // Same order as objects; null where no translation exists (the Italian name is the official one).
+    objects_translated: tr ?? undefined,
+    summary_translated: tr ? objs.slice(0, 4).map((o, k) => tr[k] ?? o).join("; ") + (objs.length > 4 ? `; +${objs.length - 4}` : "") : undefined,
     categories: i.categories,
     contains_identity_document: i.id_doc !== "none",
     prefix_match: i.prefix_match ?? undefined,
@@ -79,8 +84,13 @@ async function toolSearch(b: Record<string, unknown>) {
   // Items reach the office from the same day to a few weeks after the loss.
   const from = lostFrom ? addDays(lostFrom, -1) : null;
   const to = lostTo ? [addDays(lostTo, 30), today()].sort()[0] : null;
+  // Tourists search in their language; the register is Italian. Add the Italian catalogue terms.
+  await ensureTerms(db);
+  const lang = typeof b.lang === "string" ? b.lang.slice(0, 2) : typeof b.language === "string" ? b.language.slice(0, 2) : undefined;
+  const raw = typeof b.query === "string" && b.query.trim() ? b.query.trim().slice(0, 200) : null;
+  const expanded = raw ? expandQuery(raw) : { q: null as string | null, added: [] as string[] };
   const { data, error } = await db.rpc("search_items", {
-    q: typeof b.query === "string" && b.query.trim() ? b.query : null,
+    q: expanded.q,
     p_category: typeof b.category === "string" && b.category ? b.category : null,
     p_from: from, p_to: to,
     p_prefix: typeof b.prefix === "string" && b.prefix ? b.prefix : null,
@@ -90,10 +100,13 @@ async function toolSearch(b: Record<string, unknown>) {
   const rows = (data ?? []) as Item[];
   const total = rows[0]?.total_count ?? 0;
   const prefixGiven = typeof b.prefix === "string" && b.prefix.length > 0;
+  const aboutPassport = /passaport/i.test(expanded.q ?? "") || rows.some((r) => r.objects.some((o) => o.startsWith("PASSAPORTO")));
   return json({
     total_matches: total,
     window: from || to ? { found_from: from, found_to: to } : null,
-    results: rows.map(itemCard),
+    also_searched_for: expanded.added.length ? expanded.added : undefined,
+    results: rows.map((r) => itemCard(r, lang)),
+    passport_help: aboutPassport ? PASSPORT_HELP : undefined,
     guidance: prefixGiven
       ? (total ? "Ownership prefix matches. Offer fees and the pickup pack." : "No record with that document/IMEI prefix. Offer a search by description or an alert.")
       : total > 5
@@ -102,6 +115,40 @@ async function toolSearch(b: Record<string, unknown>) {
       ? "Nothing found. Offer to file an alert and suggest other lost-and-found offices."
       : "Read the closest matches and ask the caller to confirm.",
   });
+}
+
+// ---------- passports: where tourists go to travel home ----------
+
+const PASSPORT_HELP = {
+  title: "Need to travel before you get your passport back?",
+  text: "Your country's embassy or consulate in Rome can issue an emergency travel document. They usually ask for " +
+    "a report of the loss (denuncia di smarrimento, free, at any Polizia di Stato or Carabinieri station) and passport " +
+    "photos. If your passport is listed here, tell them the record number: it is kept at the lost-and-found office " +
+    "until you or your consulate collect it.",
+  consulates_url: `${API_BASE}/consulates`,
+};
+
+/** A country's mission in Rome from the cache; if missing, found with Exa from official sources and stored. */
+async function consulateFor(countryOrCode: string) {
+  const c = countryByCode(countryOrCode) ?? detectCountry(countryOrCode);
+  const code = c?.code ?? (/^[A-Za-z]{2}$/.test(countryOrCode) ? countryOrCode.toUpperCase() : null);
+  if (code) {
+    const { data } = await db.from("embassies").select("country_code, country, mission_name, email, phone, address, hours, lost_passport_note, source_url, refreshed_at").eq("country_code", code).maybeSingle();
+    if (data) return { found: true, ...data };
+  }
+  const name = c?.en ?? countryOrCode;
+  if (!exaEnabled() || name.length < 3) return { found: false, country: name };
+  const m = await findMission(name).catch(() => null);
+  if (!m) return { found: false, country: name };
+  const row = { country_code: code ?? name.slice(0, 2).toUpperCase(), country: name, ...m, refreshed_at: new Date().toISOString() };
+  if (code) await db.from("embassies").upsert(row);
+  return { found: true, researched_with: "Exa", ...row };
+}
+
+async function toolConsulate(b: Record<string, unknown>) {
+  const q = String(b.country ?? "").trim();
+  if (!q) return bad("country required");
+  return json({ ...(await consulateFor(q)), help: PASSPORT_HELP.text });
 }
 
 /** Ownership check. The first characters of a number are public (they only FIND the item), so proof comes from
@@ -258,7 +305,7 @@ async function toolAlert(b: Record<string, unknown>) {
     q: row.prefix ? null : row.what, p_category: row.category, p_prefix: row.prefix,
     p_from: row.lost_on ? addDays(row.lost_on, -1) : null, p_to: null, p_limit: 3,
   });
-  const already = ((hits ?? []) as Item[]).filter((h) => !row.prefix || h.prefix_match).map(itemCard);
+  const already = ((hits ?? []) as Item[]).filter((h) => !row.prefix || h.prefix_match).map((h) => itemCard(h));
   return json({
     alert_id: data.id,
     message: "Alert saved. We will check every new list and contact you if a match appears.",
@@ -284,16 +331,25 @@ async function toolOtherOffices(b: Record<string, unknown>) {
 
 // ---------- pages / documents ----------
 
+async function nationalityConsulate(itemId: string) {
+  const { data } = await db.from("items").select("nationality").eq("id", itemId).maybeSingle();
+  return data?.nationality ? await consulateFor(data.nationality) : null;
+}
+
 async function pickupPage(id: string, url: URL) {
   const item = await getItem(id);
   if (!item) return bad("unknown item", 404);
   const lang = url.searchParams.get("lang") ?? "en";
+  await ensureTerms(db);
   return json({
-    item: itemCard(item),
+    item: itemCard(item, lang.slice(0, 2)),
     fees_today: computeFees(item.objects, item.date_acquired, new Date()),
     claim_horizon: { date: claimHorizon(item.date_acquired), note: "Art. 929 c.c.: after one year from publication an unclaimed item may be assigned to the finder. Indicative date." },
     office: { ...OFFICE, hours: lang.startsWith("it") ? OFFICE.hours.it : OFFICE.hours.en },
     documents_to_bring: documentsToBring(lang),
+    passport_help: item.objects.some((o) => o.startsWith("PASSAPORTO ESTERO"))
+      ? { ...PASSPORT_HELP, consulate: await nationalityConsulate(item.id) }
+      : undefined,
     ...pickupLinks(item.id, lang, url.searchParams.get("owner") ?? undefined, url.searchParams.get("delegate") ?? undefined),
   });
 }
@@ -418,6 +474,7 @@ Deno.serve(async (req) => {
         case "/tools/pickup-pack": return await toolPickupPack(body);
         case "/tools/alert": return await toolAlert(body);
         case "/tools/other-offices": return await toolOtherOffices(body);
+        case "/tools/consulate": return await toolConsulate(body);
       }
       if (!isOperator) return bad("operator token required", 401);
       switch (path) {
@@ -456,6 +513,16 @@ Deno.serve(async (req) => {
           return new Response(new Uint8Array(bytes), { headers: { ...CORS, "Content-Type": "audio/mpeg" } });
         }
         case "/admin/voice-agent": return json(await agentConfigSummary());
+        case "/admin/translate-terms": {
+          const labels = (Array.isArray(body.labels) ? body.labels : []) as { it: string; n: number }[];
+          if (!labels.length) return bad("labels required");
+          const out = await translateLabels(labels.map((l) => l.it));
+          const n = new Map(labels.map((l) => [l.it, l.n]));
+          const rows = out.filter((r) => n.has(r.it)).map((r) => ({ ...r, n: n.get(r.it) ?? 0 }));
+          const { error } = await db.from("object_terms").upsert(rows);
+          if (error) return bad(error.message, 500);
+          return json({ translated: rows.length, of: labels.length });
+        }
         case "/admin/stt": {
           if (!voiceEnabled()) return bad("ELEVENLABS_API_KEY not configured", 503);
           if (!body.audio_base64) return bad("audio_base64 required");
@@ -489,7 +556,14 @@ Deno.serve(async (req) => {
         return json((data ?? []).map((d) => ({ ...d, explorer_url: explorerTx(d.tx_hash) })));
       }
       if (path === "/agent-registration.json") return agentRegistration();
-      if (path === "/config") return json({ voice_agent_id: VOICE_AGENT_ID(), app_url: APP_URL || null, chain: chainInfo() });
+      if (path === "/config") {
+        return json({
+          voice_agent_id: VOICE_AGENT_ID(), app_url: APP_URL || null, chain: chainInfo(),
+          voice_languages: ["en", "it", "es", "fr", "de", "pt", "zh", "ja", "ko", "ru", "uk", "pl", "ro", "ar", "nl", "hi", "tr", "fil", "el", "sv"],
+          office: OFFICE, // for "Prefer a person? Call the office"
+          app_io: "not integrated: Ritrovo drafts the App IO notice for the office to send",
+        });
+      }
       if ((m = path.match(/^\/verify\/([\w-]+)$/))) return await verifyMessage(m[1]);
       if ((m = path.match(/^\/items\/([\w-]+)\/custody$/))) return await custodyTimeline(m[1]);
       if ((m = path.match(/^\/items\/([\w-]+)\/proof$/))) return await itemProof(m[1]);
@@ -497,8 +571,16 @@ Deno.serve(async (req) => {
       if (path === "/agent/track-record") return await agentTrackRecord();
       if ((m = path.match(/^\/items\/([\w-]+)$/))) {
         const item = await getItem(m[1]);
-        return item ? json(itemCard(item)) : bad("unknown item", 404);
+        if (!item) return bad("unknown item", 404);
+        await ensureTerms(db);
+        const lang = (url.searchParams.get("lang") ?? "").slice(0, 2);
+        return json({ ...itemCard(item, lang), passport_help: item.objects.some((o) => o.startsWith("PASSAPORTO ESTERO")) ? PASSPORT_HELP : undefined });
       }
+      if (path === "/consulates") {
+        const { data } = await db.from("embassies").select("country_code, country, mission_name, email, phone, address, hours, source_url").order("country");
+        return json({ consulates: data ?? [], help: PASSPORT_HELP });
+      }
+      if ((m = path.match(/^\/consulates\/([A-Za-z]{2})$/))) return json(await consulateFor(m[1]));
       if ((m = path.match(/^\/pickup\/([\w-]+)\/delega\.pdf$/))) return await delegaPdf(m[1], url);
       if ((m = path.match(/^\/pickup\/([\w-]+)$/))) return await pickupPage(m[1], url);
       if (!isOperator) return bad(`no route for GET ${path} (or operator token required)`, 404);

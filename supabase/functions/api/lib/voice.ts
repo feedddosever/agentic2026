@@ -47,6 +47,8 @@ export function toolConfigs(apiBase: string) {
         last4: prop("string", "Last four characters of the same number, letters and digits only; empty if not asked"),
         cash: prop("string", "Cash amount the caller says was inside, digits only (e.g. 40 or 40.50); empty if not asked"),
       }, ["item_id", "prefix", "last4", "cash"]),
+    webhook("find_consulate", "Contacts of a country's embassy or consulate in Rome (address, phone, email, hours). Use when the caller lost a passport: their consulate can issue an emergency travel document so they can travel home.",
+      "/tools/consulate", { country: prop("string", "Country in English or its ISO-2 code, e.g. Japan or JP") }, ["country"]),
     webhook("get_fees", "Fees due when collecting an item (identity documents are free).",
       "/tools/fees", { item_id: prop("string", "Item id"), pickup_date: prop("string", "Planned pickup date YYYY-MM-DD, empty for today") }, ["item_id", "pickup_date"]),
     webhook("send_pickup_pack", "Prepare the pickup pack (office address and hours, documents to bring, fees, pre-filled delega PDF). Returns links and a short spoken summary.",
@@ -79,8 +81,11 @@ How to help:
 4. If there are matches, describe the best one or two in the caller's language (translate the Italian object names) and ask if it sounds like theirs. The first characters of a number are public in the official list: they find the item but prove nothing. To confirm it is theirs, call verify_ownership with just the item_id; it tells you which private question to ask (the last four characters of the number, or exactly how much cash was inside). Ask it, call again with the answer, and only say it is theirs when ownership is "verified". Never reveal these details yourself. If the record has no private questions (official list), say the office checks their ID and the contents at the counter.
 5. When it is theirs: tell them the fees with get_fees, then send_pickup_pack and read its short summary. Offer a delega if someone else will collect it.
 6. If nothing matches: say new objects arrive every week and offer create_alert (ask consent and a phone number or email). Also offer find_other_offices.
+7. Passports: if the caller lost a passport (found or not), tell them their country's embassy or consulate in Rome can issue an emergency travel document so they can travel home, and that it usually asks for a free police report of the loss (denuncia, at any Polizia di Stato or Carabinieri station). Call find_consulate and give its address and phone.
 
 On the website, the caller also sees a screen. Keep it in sync without mentioning it unless helpful: after each search call show_search_results with the same parameters; when you talk about one item call show_item; when you send the pickup pack call show_pickup_pack; only when you are actually creating an alert (a search found nothing and the caller agreed), call fill_alert_form while collecting its details (and again with saved_alert_id after create_alert). These screen tools do nothing on phone calls; never wait for them or mention errors from them.
+
+If the caller wants to speak to a person, give the office's number, +39 06 6769 3220, and its hours (Monday, Tuesday, Wednesday and Friday 8:30 to 13:00, Thursday 8:30 to 17:00).
 
 Rules: never promise an item is theirs before verification; never take payments or bank details (fees are paid at the office); do not invent office details: use only tool results. If a tool fails, apologise and offer the office phone number +39 06 6769 3220.`;
 

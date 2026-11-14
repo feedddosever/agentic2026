@@ -26,18 +26,24 @@ waiting for people to search.**
    (vision + structured output) turns it into a register entry in the office's own style. Document numbers are
    masked before anything is stored, logged or sent to a model.
 3. **Return engine (agent + policy guard).** A Claude tool-use agent routes each item: Italian identity
-   documents → a notice to the holder (App IO style), foreign documents → that country's consulate in Rome
+   documents → a notice to the holder drafted for App IO (**App IO is not integrated yet**: the office sends it), foreign documents → that country's consulate in Rome
    (contacts found and kept fresh with **Exa**), anything else → matched against citizens' alerts. A deterministic
    policy guard makes sure every legally required notification exists, whatever the model did.
-4. **A 24/7 multilingual voice line (ElevenLabs).** Callers describe what they lost in their own language; the
+4. **A 24/7 multilingual voice assistant (ElevenLabs).** In the browser, like any voice assistant: no phone number
+   needed, 20 languages, switching automatically; for a person, the site shows the office's phone numbers. Callers
+   describe what they lost in their own language; the
    agent finds the item from the first characters of the document number or IMEI (public in the official list),
    then proves ownership with a detail that is never published: the last four characters, or exactly how much
    cash was inside (Ritrovo keeps only salted hashes from intake). It states the fees and sends a pickup pack with
    a pre-filled delega.
-5. **Sentinel alerts.** No match yet? Leave an alert. When a new intake or a new official list contains the item,
+5. **Made for tourists.** The register is Italian, so the website search turns "wallet", "Reisepass" or "钱包"
+   into the register's terms, and object names are shown translated (English, Spanish, French, German, Chinese)
+   next to the official Italian name. Anyone who lost a passport is told how to get an emergency travel document
+   from their consulate (contacts for 32 countries, found with Exa; others looked up on demand).
+6. **Sentinel alerts.** No match yet? Leave an alert. When a new intake or a new official list contains the item,
    Ritrovo notifies the owner: an outbound call if a phone line is connected, otherwise a voice note in their
    language.
-6. **Trust layer on Avalanche.** Every outgoing message is signed by the agent's key and verifiable at
+7. **Trust layer on Avalanche.** Every outgoing message is signed by the agent's key and verifiable at
    `/verify/{id}` (tampering is detected). Custody events (intake → routed → returned) and the fingerprints of
    each official list (PDF sha256 + Merkle root of decoded records) are logged in `CustodyLog` on Avalanche. The
    agent has an **ERC-8004** identity. Only hashes go onchain.

@@ -334,3 +334,11 @@ Choices and why:
   call with Scribe checking the reply audio language: Romanian (ron), Filipino (fil), Arabic (ara), Italian start
   (ita). Also: the agent no longer opens the alert form before searching. Lovable prompt 15: six UI languages and
   the widget follows the page language.
+- [20] Product pass on the builder's list. (1) The website search found nothing for "wallet", "passport", "keys":
+  object names were translated (top 800 labels, 5 languages, Claude) and searches in other languages now add the
+  register's terms; Italian singular/plural handled; a pre-existing index bug made "valigia" unsearchable
+  (TROLLEY/VALIGIA parsed as a file path), fixed. (4) No phone number needed: the browser voice assistant is
+  presented as such, and the site shows the office's numbers for those who want a person (agent gives them too).
+  (5) App IO stated as not integrated (docs, routing reason, outbox label, About page). (8) Translated object
+  names, 92% coverage on a random sample. (9) Passport help: emergency travel document from the consulate, police
+  report, consulate contacts (find_consulate voice tool; Exa for missing countries). Lovable prompt 16.
