@@ -13,7 +13,7 @@ import { recordLeaf, foldProof, toHex, HOW_TO_VERIFY } from "./lib/proof.ts";
 import { exaEnabled, otherOffices, findMission } from "./lib/exa.ts";
 import { llmEnabled, MODEL } from "./lib/llm.ts";
 import { countryByCode } from "./lib/countries.ts";
-import { setupVoiceAgent, recentCalls, voiceEnabled, tts, stt, AGENT_ID as VOICE_AGENT_ID } from "./lib/voice.ts";
+import { setupVoiceAgent, recentCalls, voiceEnabled, tts, stt, agentConfigSummary, AGENT_ID as VOICE_AGENT_ID } from "./lib/voice.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -455,6 +455,7 @@ Deno.serve(async (req) => {
           const bytes = await tts(text, String(body.voice_id ?? "cjVigY5qzO86Huf0OWal"), { model: body.model_id ? String(body.model_id) : undefined });
           return new Response(new Uint8Array(bytes), { headers: { ...CORS, "Content-Type": "audio/mpeg" } });
         }
+        case "/admin/voice-agent": return json(await agentConfigSummary());
         case "/admin/stt": {
           if (!voiceEnabled()) return bad("ELEVENLABS_API_KEY not configured", 503);
           if (!body.audio_base64) return bad("audio_base64 required");

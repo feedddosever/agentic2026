@@ -81,7 +81,7 @@ Details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Build plan and decision
 
 | Sponsor | Where it does real work |
 |---|---|
-| **ElevenLabs** | The office's voice line: agent with 6 webhook tools into the API, 8 languages (EN + 7 presets), data collection for call analytics; outbound callbacks and voice notes for alerts (`supabase/functions/api/lib/voice.ts`) |
+| **ElevenLabs** | The office's voice line: agent with 6 webhook tools into the API and 4 client tools that drive the website during the call; **20 languages with automatic switching** (language-detection system tool; tested in Romanian, Filipino, Arabic, Italian, English); data collection for call analytics; outbound callbacks and voice notes for alerts; Scribe speech-to-text and TTS for the demo video (`supabase/functions/api/lib/voice.ts`) |
 | **Exa** | Consulate directory (structured contacts per country with source URL, `deep-lite` + `outputSchema`); other lost-and-found offices for the place of loss (`lib/exa.ts`) |
 | **Avalanche** | `CustodyLog` contract (intake/routed/returned events, dataset anchors), ERC-8004 agent identity, EIP-191 signed messages (`contracts/`, `lib/chain.ts`) |
 | **Lovable** | Citizen app and operator console (`lovable/PROMPTS.md`) |

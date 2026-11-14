@@ -327,3 +327,10 @@ Choices and why:
   cash amount in objects and descriptions, kept the raw operator note in the public record, and the onchain
   evidence hash included the amount unsalted. Migration 0008; voice agent tool and prompt updated (tested by
   call); Lovable prompt 14. 14 rule tests, 23 smoke checks pass.
+- [19] Builder's request: more languages (ElevenLabs, Lovable). Voice agent from 8 to 20 languages, chosen for
+  Rome's communities (Romanian, Filipino, Ukrainian, Polish, Arabic, Chinese, Hindi) and its visitors, with
+  ElevenLabs' language-detection system tool so it switches by itself mid-call; the website may open the call in
+  the page's language (override permission). Kept the agent's existing multilingual TTS model and voice. Tested by
+  call with Scribe checking the reply audio language: Romanian (ron), Filipino (fil), Arabic (ara), Italian start
+  (ita). Also: the agent no longer opens the alert form before searching. Lovable prompt 15: six UI languages and
+  the widget follows the page language.

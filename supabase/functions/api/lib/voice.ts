@@ -70,7 +70,7 @@ export function toolConfigs(apiBase: string) {
 
 export const VOICE_PROMPT = `You are Ritrovo, the voice assistant of Rome's lost-and-found office (Reparto Oggetti Rinvenuti, Polizia Locale di Roma Capitale). You are a prototype built for a hackathon; say so if asked. Use the current date and time given to you to turn "yesterday" or "on Tuesday" into dates.
 
-You speak with residents and tourists in their language. Detect the caller's language from their first words and keep using it. Be warm, calm and brief: this is a phone call, so use short sentences and never read long lists.
+You speak with residents and tourists in their language. As soon as the caller speaks one of your supported languages (English, Italian, Spanish, French, German, Portuguese, Chinese, Japanese, Korean, Russian, Ukrainian, Polish, Romanian, Arabic, Dutch, Hindi, Turkish, Filipino/Tagalog = "fil", Greek, Swedish), switch to it right away with language_detection, without asking, and keep using it. Be warm, calm and brief: this is a phone call, so use short sentences and never read long lists.
 
 How to help:
 1. Ask what they lost, roughly when, and where.
@@ -80,7 +80,7 @@ How to help:
 5. When it is theirs: tell them the fees with get_fees, then send_pickup_pack and read its short summary. Offer a delega if someone else will collect it.
 6. If nothing matches: say new objects arrive every week and offer create_alert (ask consent and a phone number or email). Also offer find_other_offices.
 
-On the website, the caller also sees a screen. Keep it in sync without mentioning it unless helpful: after each search call show_search_results with the same parameters; when you talk about one item call show_item; when you send the pickup pack call show_pickup_pack; while collecting alert details call fill_alert_form (and again with saved_alert_id after create_alert). These screen tools do nothing on phone calls; never wait for them or mention errors from them.
+On the website, the caller also sees a screen. Keep it in sync without mentioning it unless helpful: after each search call show_search_results with the same parameters; when you talk about one item call show_item; when you send the pickup pack call show_pickup_pack; only when you are actually creating an alert (a search found nothing and the caller agreed), call fill_alert_form while collecting its details (and again with saved_alert_id after create_alert). These screen tools do nothing on phone calls; never wait for them or mention errors from them.
 
 Rules: never promise an item is theirs before verification; never take payments or bank details (fees are paid at the office); do not invent office details: use only tool results. If a tool fails, apologise and offer the office phone number +39 06 6769 3220.`;
 
@@ -93,6 +93,18 @@ const FIRST = {
   pt: "Olá, aqui é o Ritrovo, o assistente de achados e perdidos de Roma. O que perdeu?",
   zh: "您好，我是罗马失物招领助手 Ritrovo。请问您丢失了什么？",
   ja: "こんにちは、ローマの遺失物アシスタント、Ritrovoです。何をなくされましたか？",
+  ko: "안녕하세요, 로마 분실물 안내 도우미 Ritrovo입니다. 무엇을 잃어버리셨나요?",
+  ru: "Здравствуйте, это Ritrovo, помощник бюро находок Рима. Что вы потеряли?",
+  uk: "Добрий день, це Ritrovo, помічник бюро знахідок Рима. Що ви загубили?",
+  pl: "Dzień dobry, tu Ritrovo, asystent rzymskiego biura rzeczy znalezionych. Co zginęło?",
+  ro: "Bună ziua, sunt Ritrovo, asistentul biroului de obiecte pierdute din Roma. Ce ați pierdut?",
+  ar: "مرحبًا، معك Ritrovo، مساعد مكتب المفقودات في روما. ماذا فقدت؟",
+  nl: "Hallo, u spreekt met Ritrovo, de assistent van het bureau gevonden voorwerpen in Rome. Wat bent u verloren?",
+  hi: "नमस्ते, मैं Ritrovo हूँ, रोम के खोया-पाया विभाग का सहायक। आपका क्या खो गया है?",
+  tr: "Merhaba, ben Ritrovo, Roma kayıp eşya bürosunun asistanıyım. Neyinizi kaybettiniz?",
+  fil: "Magandang araw, ito si Ritrovo, ang assistant ng lost and found ng Roma. Ano po ang nawala sa inyo?",
+  el: "Γεια σας, είμαι ο Ritrovo, ο βοηθός του γραφείου απολεσθέντων αντικειμένων της Ρώμης. Τι χάσατε;",
+  sv: "Hej, det här är Ritrovo, assistenten för hittegods i Rom. Vad har du tappat bort?",
 };
 
 /** Client tools: run in the citizen's browser (website widget) to mirror the conversation on screen.
@@ -154,7 +166,11 @@ export async function setupVoiceAgent(apiBase: string, existingAgentId?: string 
       agent: {
         first_message: FIRST.en,
         language: "en",
-        prompt: { prompt: VOICE_PROMPT, llm: Deno.env.get("ELEVENLABS_LLM") ?? "claude-sonnet-5-5", tool_ids: toolIds, temperature: 0.3, timezone: "Europe/Rome" },
+        prompt: {
+          prompt: VOICE_PROMPT, llm: Deno.env.get("ELEVENLABS_LLM") ?? "claude-sonnet-5-5", tool_ids: toolIds, temperature: 0.3, timezone: "Europe/Rome",
+          // Switch voice and language by itself when the caller speaks (or asks for) another supported language.
+          built_in_tools: { language_detection: { type: "system", name: "language_detection", description: "", params: { system_tool_type: "language_detection" } } },
+        },
       },
       language_presets: Object.fromEntries(
         Object.entries(FIRST).filter(([l]) => l !== "en").map(([l, msg]) => [l, { overrides: { agent: { language: l, first_message: msg } } }]),
@@ -163,6 +179,8 @@ export async function setupVoiceAgent(apiBase: string, existingAgentId?: string 
     },
     platform_settings: {
       widget: { language_selector: true },
+      // Let the website open the call in the page's language.
+      overrides: { conversation_config_override: { agent: { language: true, first_message: true } } },
       data_collection: {
         language: { type: "string", description: "Language the caller spoke (ISO code)" },
         item_type: { type: "string", description: "What the caller lost, in English, a few words" },
@@ -232,6 +250,19 @@ export async function tts(text: string, voiceId: string, opts: { model?: string;
   return new Uint8Array(await r.arrayBuffer());
 }
 
+/** What the live agent is configured with (operator check: model, voice, languages, system tools). */
+export async function agentConfigSummary() {
+  if (!AGENT_ID()) return null;
+  const a = await (await el(`/v1/convai/agents/${AGENT_ID()}`)).json();
+  const cc = a.conversation_config ?? {};
+  return {
+    agent_id: a.agent_id, tts: cc.tts, asr: cc.asr, language: cc.agent?.language,
+    llm: cc.agent?.prompt?.llm, built_in_tools: Object.keys(cc.agent?.prompt?.built_in_tools ?? {}).filter((k) => cc.agent.prompt.built_in_tools[k]),
+    language_presets: Object.keys(cc.language_presets ?? {}), overrides: a.platform_settings?.overrides,
+    widget_language_selector: a.platform_settings?.widget?.language_selector,
+  };
+}
+
 /** Speech to text with word timings (used to cut recorded calls for the demo video). */
 export async function stt(audio: Uint8Array, filename = "call.wav") {
   if (!KEY) throw new Error("ELEVENLABS_API_KEY not configured");
@@ -242,5 +273,5 @@ export async function stt(audio: Uint8Array, filename = "call.wav") {
   const r = await fetch(`${BASE}/v1/speech-to-text`, { method: "POST", headers: { "xi-api-key": KEY }, body: form, signal: AbortSignal.timeout(60_000) });
   if (!r.ok) throw new Error(`ElevenLabs ${r.status} /v1/speech-to-text: ${(await r.text()).slice(0, 400)}`);
   const j = await r.json();
-  return { text: j.text, words: (j.words ?? []).filter((w: { type?: string }) => w.type === "word").map((w: { text: string; start: number; end: number }) => ({ text: w.text, start: w.start, end: w.end })) };
+  return { text: j.text, language_code: j.language_code ?? null, language_probability: j.language_probability ?? null, words: (j.words ?? []).filter((w: { type?: string }) => w.type === "word").map((w: { text: string; start: number; end: number }) => ({ text: w.text, start: w.start, end: w.end })) };
 }

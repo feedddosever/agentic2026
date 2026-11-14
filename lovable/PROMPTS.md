@@ -380,3 +380,20 @@ printed on the same page (and in the official list), so typing them proves nothi
 Keep the prefix search on the home page as it is: there the first characters are used to FIND the item.
 Never store or log what the user types.
 ```
+
+## Prompt 15: more languages, and the call opens in the page's language
+
+```
+1. Replace the EN/IT toggle with a compact language dropdown: English, Italiano, Español, Français, Deutsch, 中文.
+   Translate all interface text into the new languages (keep the official object names in Italian, exactly as in
+   the city's register: they are data; category labels and everything else are translated). Remember the choice
+   in localStorage; on first visit, use the browser language if it is one of these, else English.
+2. Pass the current language to the voice widget: set the attribute override-language="{code}" on
+   <elevenlabs-convai> (codes: en, it, es, fr, de, zh) and re-mount the widget when the language changes (use the
+   language as the React key), so the next call starts in that language. Keep the client tools registration as is.
+3. Under the home hero, change the voice line to: "Prefer to talk? Ask our assistant in 20 languages — it switches
+   to yours automatically." (translated in each language).
+4. About page: add a short "Languages" line: the voice assistant speaks English, Italian, Spanish, French, German,
+   Portuguese, Chinese, Japanese, Korean, Russian, Ukrainian, Polish, Romanian, Arabic, Dutch, Hindi, Turkish,
+   Filipino, Greek and Swedish, and switches automatically when the caller does.
+```
