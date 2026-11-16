@@ -11,15 +11,22 @@ jobs:
   import:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # Only the Ritrovo operator token is needed: the import goes through Ritrovo's own API.
+      OPERATOR_TOKEN: ${{ secrets.RITROVO_OPERATOR_TOKEN }}
+      API_BASE: https://izrggntqsssfzazjfhht.supabase.co/functions/v1/api
     steps:
+      - name: Skip when the secret isn't set
+        if: env.OPERATOR_TOKEN == ''
+        run: echo "::notice::RITROVO_OPERATOR_TOKEN is not set in the repository secrets, so the import is skipped."
       - uses: actions/checkout@v4
+        if: env.OPERATOR_TOKEN != ''
       - uses: actions/setup-python@v5
+        if: env.OPERATOR_TOKEN != ''
         with:
           python-version: "3.13"
-      - run: pip install -r requirements.txt
+      - if: env.OPERATOR_TOKEN != ''
+        run: pip install -r requirements.txt
       - name: Import
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          API_BASE: https://izrggntqsssfzazjfhht.supabase.co/functions/v1/api
-          OPERATOR_TOKEN: ${{ secrets.RITROVO_OPERATOR_TOKEN }}
-        run: python3 pipeline/import_new_list.py izrggntqsssfzazjfhht
+        if: env.OPERATOR_TOKEN != ''
+        run: python3 pipeline/import_new_list.py

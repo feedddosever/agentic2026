@@ -1,9 +1,9 @@
 """Sentinel importer: fetch the city's current found-items list, decode it, upsert new items, fingerprint
 the list, anchor it onchain and check new items against citizens' alerts.
 
-Run from the repo root:  python3 pipeline/import_new_list.py <project_ref>
-Env: SUPABASE_ACCESS_TOKEN (Management API), API_BASE and OPERATOR_TOKEN (Ritrovo API).
-Idempotent: a list whose sha256 is already in `datasets` is skipped.
+Run from the repo root:  python3 pipeline/import_new_list.py
+Env: API_BASE and OPERATOR_TOKEN (Ritrovo API). Everything goes through the operator API: no database or
+Supabase account credentials are needed. Idempotent: a list whose sha256 is already known is skipped.
 """
 import hashlib
 import json
@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "pipeline"))
 os.chdir(ROOT)
 import build_dataset as bd  # noqa: E402  (loads word frequencies from the committed records)
-from load_supabase import lit, merkle_root, record_leaf, sql, store_proofs  # noqa: E402
+from load_supabase import merkle_proofs, merkle_root, record_leaf  # noqa: E402
 from parse_records import parse  # noqa: E402
 
 SERVICE_PAGE = "https://www.comune.roma.it/web/it/scheda-servizi.page?contentId=INF39645"
@@ -40,25 +40,35 @@ def latest_list_url() -> str:
     return "https://www.comune.roma.it/web-resources/cms/documents/" + links[-1][0]
 
 
-def api(path: str, body: dict):
-    base, tok = os.environ.get("API_BASE"), os.environ.get("OPERATOR_TOKEN")
-    if not base or not tok:
-        return None
-    req = urllib.request.Request(base + path, data=json.dumps(body).encode(), method="POST",
+API_BASE = os.environ.get("API_BASE", "https://izrggntqsssfzazjfhht.supabase.co/functions/v1/api")
+
+
+def api(path: str, body: dict, strict: bool = False):
+    """Ritrovo operator API. strict=True: any error stops the import; otherwise (notifications) it is reported."""
+    tok = os.environ.get("OPERATOR_TOKEN")
+    if not tok:
+        raise SystemExit("OPERATOR_TOKEN is not set")
+    req = urllib.request.Request(API_BASE + path, data=json.dumps(body).encode(), method="POST",
                                  headers={"Content-Type": "application/json", "x-operator-token": tok})
     try:
         with urllib.request.urlopen(req, timeout=150) as r:
             return json.loads(r.read())
-    except Exception as e:  # never fail the import because a notification step failed
+    except Exception as e:
+        if strict:
+            detail = e.read().decode()[:300] if hasattr(e, "read") else ""
+            raise SystemExit(f"{path} failed: {e} {detail}")
         return {"error": str(e)}
 
 
+def step(name: str, **body):
+    return api("/admin/import", {"step": name, **body}, strict=True)
+
+
 def main():
-    ref = sys.argv[1]
     url = latest_list_url()
     pdf = http_get(url)
     sha = hashlib.sha256(pdf).hexdigest()
-    if sql(ref, f"select 1 from public.datasets where pdf_sha256 = {lit(sha)}"):
+    if step("check", pdf_sha256=sha)["exists"]:
         print("list unchanged:", url)
         return
     year = int(re.search(r"Rinvenimenti_\d{4}(\d{4})_", url).group(1))
@@ -77,22 +87,22 @@ def main():
         objs = [bd.fix(i) for i in r["items"]]
         built.append({"id": r["id"], "year": year, "number": r["number"], "date": r["date"], "page": r["page"], "objects": objs,
                       "categories": sorted({bd.categorize(o) for o in objs}), "id_doc": bd.id_doc_kind(objs), "prefixes": bd.prefixes(objs)})
-    existing = {row["id"] for row in sql(ref, f"select id from public.items where year = {year} and source = 'official_list'") or []}
+    existing = set(step("existing_ids", year=year)["ids"])
     new = [r for r in built if r["id"] not in existing]
     print(f"{url}: {len(built)} records, {len(new)} new")
 
-    cols = "(id, source, year, number, date_acquired, page, objects, categories, id_doc, prefixes)"
-    for i in range(0, len(new), 400):
-        rows = ",".join(f"({lit(r['id'])},'official_list',{year},{r['number']},{lit(r['date'])}::date,{r['page']},"
-                        f"{lit(r['objects'])},{lit(r['categories'])},{lit(r['id_doc'])},{lit(r['prefixes'])})" for r in new[i:i + 400])
-        sql(ref, f"insert into public.items {cols} values {rows} on conflict (id) do nothing;")
+    # Insert new records and update existing ones, so the database mirrors the latest list (and its proofs).
+    for i in range(0, len(built), 500):
+        step("items", items=built[i:i + 500])
 
-    root = merkle_root([record_leaf(r) for r in built])
-    sql(ref, f"insert into public.datasets (source_url, pdf_sha256, records, merkle_root) values "
-             f"({lit(url)}, {lit(sha)}, {len(built)}, {lit(root)}) on conflict (pdf_sha256) do nothing;")
-    print("fingerprint", sha[:16], root[:18])
-    ds = sql(ref, f"select id from public.datasets where pdf_sha256 = {lit(sha)}")
-    store_proofs(ref, built, ds[0]["id"])  # per-record proofs against the root anchored below
+    leaves = {r["id"]: record_leaf(r) for r in built}
+    root = merkle_root(list(leaves.values()))
+    ds = step("dataset", source_url=url, pdf_sha256=sha, records=len(built), merkle_root=root)["dataset_id"]
+    print("fingerprint", sha[:16], root[:18], "dataset", ds)
+    paths = merkle_proofs(list(leaves.values()))
+    rows = [{"id": rid, "proof": paths[leaf]} for rid, leaf in leaves.items()]
+    for i in range(0, len(rows), 500):
+        step("proofs", dataset_id=ds, rows=rows[i:i + 500])
 
     print("anchor:", api("/chain/anchor-datasets", {}))
     if new:

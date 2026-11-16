@@ -228,6 +228,50 @@ async function toolVerify(b: Record<string, unknown>) {
   });
 }
 
+// ---------- daily import of the official list (called by the GitHub Action with the operator token) ----------
+
+async function importStep(b: Record<string, unknown>) {
+  switch (b.step) {
+    case "check": {
+      const { data } = await db.from("datasets").select("id").eq("pdf_sha256", String(b.pdf_sha256 ?? "")).maybeSingle();
+      return json({ exists: !!data });
+    }
+    case "existing_ids": {
+      const ids: string[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await db.from("items").select("id").eq("source", "official_list").eq("year", Number(b.year)).range(from, from + 999);
+        if (error) return bad(error.message, 500);
+        ids.push(...(data ?? []).map((r) => r.id as string));
+        if (!data || data.length < 1000) break;
+      }
+      return json({ ids });
+    }
+    case "items": {
+      // The database mirrors the latest list: new records are inserted, existing ones updated (list fields only).
+      const rows = ((b.items ?? []) as Record<string, unknown>[]).slice(0, 1000).map((r) => ({
+        id: String(r.id), source: "official_list", year: Number(r.year), number: Number(r.number), date_acquired: String(r.date),
+        page: Number(r.page), objects: r.objects as string[], categories: r.categories as string[], id_doc: String(r.id_doc),
+        prefixes: r.prefixes as string[],
+      }));
+      if (rows.some((r) => !/^\d{4}-\d+$/.test(r.id))) return bad("official list ids look like 2026-123");
+      const { error } = await db.from("items").upsert(rows, { onConflict: "id" });
+      return error ? bad(error.message, 500) : json({ upserted: rows.length });
+    }
+    case "dataset": {
+      const row = { source_url: String(b.source_url), pdf_sha256: String(b.pdf_sha256), records: Number(b.records), merkle_root: String(b.merkle_root) };
+      const { error } = await db.from("datasets").upsert(row, { onConflict: "pdf_sha256", ignoreDuplicates: true });
+      if (error) return bad(error.message, 500);
+      const { data } = await db.from("datasets").select("id").eq("pdf_sha256", row.pdf_sha256).single();
+      return json({ dataset_id: data?.id });
+    }
+    case "proofs": {
+      const { data, error } = await db.rpc("import_set_proofs", { p_dataset_id: Number(b.dataset_id), p_rows: b.rows ?? [] });
+      return error ? bad(error.message, 500) : json({ updated: data });
+    }
+    default: return bad("step must be check, existing_ids, items, dataset or proofs");
+  }
+}
+
 // ---------- trust: proofs of publication and the agent's onchain track record ----------
 
 /** Proof that an official-list record is in the list whose fingerprint was anchored on Avalanche. */
@@ -538,6 +582,7 @@ Deno.serve(async (req) => {
           return new Response(new Uint8Array(bytes), { headers: { ...CORS, "Content-Type": "audio/mpeg" } });
         }
         case "/admin/voice-agent": return json(await agentConfigSummary());
+        case "/admin/import": return await importStep(body);
         case "/admin/translate-terms": {
           const labels = (Array.isArray(body.labels) ? body.labels : []) as { it: string; n: number }[];
           if (!labels.length) return bad("labels required");

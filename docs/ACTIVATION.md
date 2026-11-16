@@ -46,8 +46,10 @@ If team1 requires mainnet: fund on C-Chain and use `--network avalanche` + `CHAI
 Set secret `APP_URL` to the Lovable app URL (pickup and verify links in messages then point to the app).
 
 ## 7. Sentinel workflow
-GitHub repo → Settings → Secrets → Actions: `SUPABASE_ACCESS_TOKEN` (personal access token) and
-`RITROVO_OPERATOR_TOKEN`. Run "Import official found-items list" once from the Actions tab.
+GitHub repo → Settings → Secrets → Actions: one secret, `RITROVO_OPERATOR_TOKEN` (the operator token). The import
+goes through Ritrovo's own API (`/admin/import`), so no Supabase account token is stored in GitHub. Without the
+secret the workflow skips with a notice instead of failing. Run "Import official found-items list" once from the
+Actions tab to check it.
 
 ## 8. Before the demo
 ```bash

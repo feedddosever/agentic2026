@@ -360,3 +360,9 @@ Choices and why:
   into the register's terms by a fast Claude call, cached per query (migration 0011) and mapped to the register's
   forms; a query with nothing searchable returns no results instead of everything. Tested: Russian, Portuguese,
   Polish, Arabic, Japanese, Korean, Chinese, English, Italian, prefix.
+- [24] After the event: the first scheduled import failed because the repository secrets were never added (empty
+  token, 401). The import now goes through the operator API (`/admin/import`: check, existing ids, upsert records so
+  the database mirrors the latest list, dataset fingerprint, bulk proofs via `import_set_proofs`, migration 0012),
+  so GitHub only needs `RITROVO_OPERATOR_TOKEN`; without it the workflow skips with a notice. Operator token
+  rotated (old one refused). Tested: live check against the city page (list unchanged) and the full path re-run on
+  the 2026 list (6,940 records, proofs still verify against Avalanche, database unchanged).
